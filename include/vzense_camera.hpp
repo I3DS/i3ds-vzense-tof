@@ -13,9 +13,9 @@
 
 #include <i3ds/tof_camera_sensor.hpp>
 
-namespace corobx {
+namespace i3ds {
 
-class VzenseCamera : public i3ds::ToFCamera {
+class VzenseCamera : public ToFCamera {
 public:
   struct Parameters
   {
@@ -48,7 +48,7 @@ public:
     //TODO(sigurdm): implement
   }
 
-/* UNIMPLEMENTED METHODS from i3ds::ToFCamera
+/* UNIMPLEMENTED METHODS from ToFCamera
 
   // Get the region of interest enabled for ToF-camera.
   virtual bool region_enabled() const {return false;}
@@ -63,7 +63,7 @@ public:
   virtual double range_max_depth() const {return 1.0e6;}
 
   // Attach handlers to the server.
-  virtual void Attach(i3ds::Server& server);
+  virtual void Attach(Server& server);
 */
 protected:
   // Constant parameters for Vzense camera.
@@ -71,16 +71,16 @@ protected:
 /* UNIMPLEMENTED METHODS:
 
   // Handler for ToF-camera region of interest command.
-  virtual void handle_region(i3ds::ToFCamera::RegionService::Data& command);
+  virtual void handle_region(ToFCamera::RegionService::Data& command);
 
   // Handler for ToF-camera range command.
-  virtual void handle_range(i3ds::ToFCamera::RangeService::Data& command);
+  virtual void handle_range(ToFCamera::RangeService::Data& command);
 
   // Handler for camera configuration query.
-  virtual void handle_configuration(i3ds::ToFCamera::ConfigurationService::Data& config);
+  virtual void handle_configuration(ToFCamera::ConfigurationService::Data& config);
 */
 };
 
-} // namespace corobx
+} // namespace i3ds
 
 #endif  // __VZENSE_CAMERA_HPP

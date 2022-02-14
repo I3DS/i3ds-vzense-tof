@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 {
   unsigned int node_id;
 
-  corobx::VzenseCamera::Parameters param;
+  i3ds::VzenseCamera::Parameters param;
   i3ds::Configurator configurator;
 
   po::options_description desc("Allowed camera control options");
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 
   i3ds::Server server(context);
 
-  corobx::VzenseCamera camera(node_id, param);
+  i3ds::VzenseCamera camera(node_id, param);
 
   camera.Attach(server);
 

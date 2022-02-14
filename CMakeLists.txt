@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.0)
 # Set some project wide defintions
 ################################################################################
 
-project (corob-x-tof)
+project (i3ds-vzense-tof)
 
 set (PROJECT_AUTHOR "SINTEF Digital")
 set (PROJECT_URL "https://corob-x.eu/")
@@ -15,11 +15,12 @@ set (PROJECT_VERSION "1.0")
 
 enable_testing ()
 
+# Builds for embedded systems are not tested
 option(BUILD_EMBEDDED "Build for embedded systems" OFF)
-option(BUILD_PETALINUX "Build for petalinux using bitbake" OFF)
 option(BUILD_DEBUG "Enable debug-build with lots and lots of warnings" OFF)
 
 if (BUILD_EMBEDDED)
+  MESSAGE(WARNING "Building Vzense for embedded systems is untested")
   if(NOT DEFINED CMAKE_FIND_ROOT_PATH)
     MESSAGE(FATAL_ERROR "CMAKE_FIND_ROOT_PATH path must be set when compiling for embedded")
   endif(NOT DEFINED CMAKE_FIND_ROOT_PATH)

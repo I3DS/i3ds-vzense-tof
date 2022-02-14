@@ -22,5 +22,5 @@
 
 namespace logging = boost::log;
 
-corobx::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters &param) : i3ds::ToFCamera(node), param_(param) {
+i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters &param) : i3ds::ToFCamera(node), param_(param) {
 }
