@@ -13,6 +13,8 @@
 
 #include <i3ds/tof_camera_sensor.hpp>
 
+#include "Vzense_api2.h"
+
 namespace i3ds {
 
 class VzenseCamera : public ToFCamera {
@@ -32,9 +34,7 @@ public:
     return false;
   }
 
-  void do_activate() {
-    //TODO(sigurdm): implement
-  }
+  void do_activate();
 
   void do_deactivate() {
     //TODO(sigurdm): implement
@@ -68,6 +68,8 @@ public:
 protected:
   // Constant parameters for Vzense camera.
   const Parameters param_;
+
+  PsDeviceHandle deviceHandle_ = nullptr;
 /* UNIMPLEMENTED METHODS:
 
   // Handler for ToF-camera region of interest command.
