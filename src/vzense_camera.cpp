@@ -37,12 +37,36 @@ int initialize_vzense() {
     return 1;
 }
 
-const char* find_device_uri(std::string camera_name, PsDeviceInfo pDeviceListInfo[], int deviceCount) {
-    if (camera_name == "") {
-        BOOST_LOG_TRIVIAL(info) << "Camera name not set, opening first available device.";
-        return pDeviceListInfo[0].uri;
+const char* connectStatus2string(PsConnectStatus status) {
+  switch (status) {
+    case ConnectUNKNOWN:
+      return "Unknown";
+    case Unconnected:
+      return "Unconnected";
+    case Connected:
+      return "Connected";
+    case Opened:
+      return "Opened";
+    default:
+      return "Undefined";
+  }
+}
+
+void log_device_info(PsDeviceInfo pDeviceListInfo[], int deviceCount) {
+    for (BOOST_TYPEOF(deviceCount) i=0; i<deviceCount; i++) {
+        BOOST_LOG_TRIVIAL(debug) << "Camera " << i << ":";
+        BOOST_LOG_TRIVIAL(debug) << "  Device type:" << pDeviceListInfo[i].devicetype;
+        BOOST_LOG_TRIVIAL(debug) << "  URI:        " << pDeviceListInfo[i].uri;
+        BOOST_LOG_TRIVIAL(debug) << "  FW:         " << pDeviceListInfo[i].fw;
+        BOOST_LOG_TRIVIAL(debug) << "  Alias:      " << pDeviceListInfo[i].alias;
+        BOOST_LOG_TRIVIAL(debug) << "  Status:     " << connectStatus2string(pDeviceListInfo[i].status);
     }
-    if (camera_name == "any" || camera_name == "first") {
+}
+
+const char* find_device_uri(std::string camera_name, PsDeviceInfo pDeviceListInfo[], int deviceCount) {
+    log_device_info(pDeviceListInfo, deviceCount);
+
+    if (camera_name == "first") {
         return pDeviceListInfo[0].uri;
     }
 
@@ -50,13 +74,21 @@ const char* find_device_uri(std::string camera_name, PsDeviceInfo pDeviceListInf
         return pDeviceListInfo[deviceCount - 1].uri;
     }
 
+    if (camera_name == "" || camera_name == "any") {
+        if (camera_name == "") {
+            BOOST_LOG_TRIVIAL(info) << "Camera name not set, opening first available device.";
+        }
+        for (BOOST_TYPEOF(deviceCount) i=0; i<deviceCount; i++) {
+            if(pDeviceListInfo[i].status == Connected) {
+                return pDeviceListInfo[i].uri;
+            }
+        }
+        return pDeviceListInfo[0].uri;
+    }
+
+    // TODO(sigurdal): Add indexed access? I.e. 4 -> pDeviceListInfo[4].uri
+
     for (BOOST_TYPEOF(deviceCount) i=0; i<deviceCount; i++) {
-        BOOST_LOG_TRIVIAL(debug) << "Camera " << i << ":";
-        BOOST_LOG_TRIVIAL(debug) << "  Device type:" << pDeviceListInfo[i].devicetype;
-        BOOST_LOG_TRIVIAL(debug) << "  URI:        " << pDeviceListInfo[i].uri;
-        BOOST_LOG_TRIVIAL(debug) << "  FW:         " << pDeviceListInfo[i].fw;
-        BOOST_LOG_TRIVIAL(debug) << "  Alias:      " << pDeviceListInfo[i].alias;
-        BOOST_LOG_TRIVIAL(debug) << "  Status:     " << pDeviceListInfo[i].status;
         if (camera_name == pDeviceListInfo[i].alias) {
             return pDeviceListInfo[i].uri;
         }
