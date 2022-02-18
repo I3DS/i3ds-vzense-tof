@@ -1,4 +1,5 @@
 find_package (Boost COMPONENTS program_options log REQUIRED)
+find_package (OpenCV 4.0.0)
 
 set(TARGET i3ds_vzense_tof)
 
@@ -22,6 +23,7 @@ set (LIBS
   pthread
   ${VZENSE_LIBS}
   ${Boost_LIBRARIES}
+  ${OpenCV_LIBS}
   )
 
 

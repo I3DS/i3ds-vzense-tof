@@ -40,9 +40,7 @@ public:
     //TODO(sigurdm): implement
   }
 
-  void do_start() {
-    //TODO(sigurdm): implement
-  }
+  void do_start();
 
   void do_stop() {
     //TODO(sigurdm): implement
@@ -69,7 +67,6 @@ protected:
   // Constant parameters for Vzense camera.
   const Parameters param_;
 
-  PsDeviceHandle deviceHandle_ = nullptr;
 /* UNIMPLEMENTED METHODS:
 
   // Handler for ToF-camera region of interest command.
@@ -81,6 +78,10 @@ protected:
   // Handler for camera configuration query.
   virtual void handle_configuration(ToFCamera::ConfigurationService::Data& config);
 */
+private:
+  bool get_depth_frame(uint32_t slope);
+  uint32_t session_index_;
+  PsDeviceHandle device_handle_ = nullptr;
 };
 
 } // namespace i3ds
