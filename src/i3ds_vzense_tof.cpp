@@ -91,9 +91,6 @@ int main(int argc, char** argv) {
 
   server.Start();
 
-  camera.do_activate();
-  camera.do_start();
-
   while (running) {
     sleep(1);
   }

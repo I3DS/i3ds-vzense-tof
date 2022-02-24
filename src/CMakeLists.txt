@@ -23,7 +23,6 @@ set (LIBS
   pthread
   ${VZENSE_LIBS}
   ${Boost_LIBRARIES}
-  ${OpenCV_LIBS}
   )
 
 
