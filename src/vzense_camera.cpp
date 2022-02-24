@@ -339,16 +339,19 @@ i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters &param
             break;
         }
     }
-
-    Ps2_CloseDevice(&device_handle_);
-    Ps2_Shutdown();
-    cv::destroyAllWindows();
+  }
 }
 
 
 void i3ds::VzenseCamera::do_activate() {
     //TODO(sigurdm): implement
     
+}
+
+void i3ds::VzenseCamera::do_deactivate() {
+  Ps2_CloseDevice(&device_handle_);
+  Ps2_Shutdown();
+  cv::destroyAllWindows();
 }
 
 void i3ds::VzenseCamera::do_start() {
