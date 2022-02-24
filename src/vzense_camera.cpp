@@ -24,7 +24,6 @@
 #include <boost/log/expressions.hpp>
 #include <boost/log/trivial.hpp>
 
-#include <opencv2/opencv.hpp>
 #include <i3ds/time.hpp>
 
 namespace logging = boost::log;
@@ -272,26 +271,6 @@ bool connect_to_device(std::string camera_name, PsDeviceHandle& deviceHandle) {
   return true;
 }
 
-static void Opencv_Depth(uint32_t slope, int height, int width, uint8_t* pData, cv::Mat& dispImg) {
-  dispImg = cv::Mat(height, width, CV_16UC1, pData);
-  cv::Point2d pointxy(width / 2, height / 2);
-  int val = dispImg.at<ushort>(pointxy);
-  char text[20];
-#ifdef _WIN32
-  sprintf_s(text, "%d", val);
-#else
-  snprintf(text, sizeof(text), "%d", val);
-#endif
-  dispImg.convertTo(dispImg, CV_8U, 255.0 / slope);
-  applyColorMap(dispImg, dispImg, cv::COLORMAP_RAINBOW);
-  int color;
-  if (val > 2500)
-    color = 0;
-  else
-    color = 4096;
-  circle(dispImg, pointxy, 4, cv::Scalar(color, color, color), -1, 8, 0);
-  putText(dispImg, text, pointxy, cv::FONT_HERSHEY_DUPLEX, 2, cv::Scalar(color, color, color));
-}
 bool i3ds::VzenseCamera::get_depth_frame() {
   PsFrame depthFrame = {0};
   PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
@@ -300,11 +279,6 @@ bool i3ds::VzenseCamera::get_depth_frame() {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
     return false;
   }
-
-  cv::Mat imageMat;
-  Opencv_Depth(slope, depthFrame.height, depthFrame.width, depthFrame.pFrameData, imageMat);
-
-  cv::imshow("Depth", imageMat);
 
   send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
   return true;
@@ -340,7 +314,6 @@ void i3ds::VzenseCamera::do_activate() {
 void i3ds::VzenseCamera::do_deactivate() {
   Ps2_CloseDevice(&device_handle_);
   Ps2_Shutdown();
-  cv::destroyAllWindows();
 }
 
 void i3ds::VzenseCamera::do_start() {
@@ -411,17 +384,10 @@ void i3ds::VzenseCamera::sample_loop() {
       get_depth_frame();
     }
 
-    unsigned char key = cv::waitKey(1);
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 
-    switch (key) {
-      case 'q':
-      case 'Q':
-        running = false;
-        break;
-    }
 void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint height) {
   ToFCamera::MeasurementTopic::Data frame;
   ToFCamera::MeasurementTopic::Codec::Initialize(frame);
