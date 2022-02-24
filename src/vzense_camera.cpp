@@ -250,13 +250,17 @@ bool i3ds::VzenseCamera::get_depth_frame(uint32_t slope) {
 
 i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters& param)
     : i3ds::ToFCamera(node), param_(param) {
+}
+
+void i3ds::VzenseCamera::do_activate() {
   if (!initialize_vzense()) {
-    // TODO(sigurdal): Throw exception?
-    return;
+    throw i3ds::DeviceError("Could not initialize Vzense driver.");
   }
 
   bool connected = false;
-  for (int i = 0; i < 10; i++) {
+  uint retries = 0;
+
+  for (uint i = 0; i < retries + 1; i++) {
     if (!connect_to_device(param_.camera_name, device_handle_)) {
       BOOST_LOG_TRIVIAL(warning) << "Retrying camera connection in 1s";
       std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -265,24 +269,32 @@ i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters& param
     connected = true;
     break;
   }
+
   if (!connected) {
     BOOST_LOG_TRIVIAL(error) << "Could not connect to camera";
-    // TODO(sigurdal): Throw exception?
-    return;
+    throw i3ds::DeviceError("Could not connect to camera.");
   }
+}
 
+void i3ds::VzenseCamera::do_deactivate() {
+  Ps2_CloseDevice(&device_handle_);
+  Ps2_Shutdown();
+  cv::destroyAllWindows();
+}
+
+void i3ds::VzenseCamera::do_start() {
   session_index_ = 0;
 
-  PsReturnStatus status = Ps2_StartStream(device_handle_, session_index_);
+  auto status = Ps2_StartStream(device_handle_, session_index_);
 
   if (status != PsReturnStatus::PsRetOK) {
     BOOST_LOG_TRIVIAL(warning) << "StartStream failed: " << status;
-    // TODO(sigurdal): Throw exception?
-    return;
+    throw i3ds::DeviceError("Failed to start stream.");
   }
 
+  // TODO(sigurdal): Implement WDR mode?
   // PsWDROutputMode wdrMode = { PsWDRTotalRange_Two, PsNearRange, 1, PsFarRange, 1, PsUnknown, 1 };
-  PsDataMode dataMode = PsDepthAndIR_30;
+  auto dataMode = PsDepthAndIR_30;
   status = Ps2_GetDataMode(device_handle_, session_index_, &dataMode);
 
   if (status != PsReturnStatus::PsRetOK)
@@ -291,13 +303,25 @@ i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters& param
     BOOST_LOG_TRIVIAL(info) << "Get Ps2_GetDataMode: " << dataMode2str(dataMode);
 
   if (dataMode == PsWDR_Depth) {
-    // TODO(sigurdal): implement
+    // TODO(sigurdal): Implement WDR mode?
     BOOST_LOG_TRIVIAL(error) << "Wide Dynamic Range (WDR) not implemented yet. Aborting.";
-    return;
+    Ps2_StopStream(device_handle_, session_index_);
+    throw i3ds::DeviceError("Wide Dynamic Range mode is not implemented yet. Aborting.");
   }
 
   PsDepthRange depth_range = PsNearRange;
+
+  status = Ps2_SetDepthRange(device_handle_, session_index_, PsFarRange);
+  if (status != PsReturnStatus::PsRetOK) {
+    BOOST_LOG_TRIVIAL(warning) << "Failed to set range: " << dataMode2str(dataMode);
+  }
+
   status = Ps2_GetDepthRange(device_handle_, session_index_, &depth_range);
+  if (status != PsReturnStatus::PsRetOK) {
+    BOOST_LOG_TRIVIAL(warning) << "Failed to get range: " << dataMode2str(dataMode);
+    Ps2_StopStream(device_handle_, session_index_);
+    throw i3ds::DeviceError("Could not get the depth range of the camera.");
+  }
 
   // Get required parameters
   PsMeasuringRange measuringrange = {0};
@@ -328,20 +352,11 @@ i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters& param
   }
 }
 
-void i3ds::VzenseCamera::do_activate() {
-  // TODO(sigurdm): implement
-}
-
-void i3ds::VzenseCamera::do_deactivate() {
-  Ps2_CloseDevice(&device_handle_);
-  Ps2_Shutdown();
-  cv::destroyAllWindows();
-}
-
-void i3ds::VzenseCamera::do_start() {
-  // TODO(sigurdm): implement
-}
-
 void i3ds::VzenseCamera::do_stop() {
-  // TODO(sigurdm): implement
+  auto status = Ps2_StopStream(device_handle_, session_index_);
+
+  if (status != PsReturnStatus::PsRetOK) {
+    BOOST_LOG_TRIVIAL(warning) << "Failed stopping stream: " << status;
+    throw i3ds::DeviceError("Failed to stop stream.");
+  }
 }
