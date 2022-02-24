@@ -18,72 +18,68 @@
 namespace i3ds {
 
 class VzenseCamera : public ToFCamera {
-public:
-  struct Parameters
-  {
+  public:
+  struct Parameters {
     // Unique identifier of camera parameter.
     std::string camera_name;
   };
 
   // Constructor and destructor.
   VzenseCamera(i3ds_asn1::NodeID node, const Parameters &param);
-  ~VzenseCamera() { }
+  ~VzenseCamera() {}
 
   bool is_sampling_supported(i3ds_asn1::SampleCommand sample) {
-    //TODO(sigurdm): implement
+    // TODO(sigurdm): implement
     return false;
   }
 
   void do_activate();
 
-  void do_deactivate() {
-    //TODO(sigurdm): implement
-  }
+  void do_deactivate();
 
   void do_start();
 
-  void do_stop() {
-    //TODO(sigurdm): implement
-  }
+  void do_stop();
 
-/* UNIMPLEMENTED METHODS from ToFCamera
+  /* UNIMPLEMENTED METHODS from ToFCamera
 
-  // Get the region of interest enabled for ToF-camera.
-  virtual bool region_enabled() const {return false;}
+    // Get the region of interest enabled for ToF-camera.
+    virtual bool region_enabled() const {return false;}
 
-  // Get the region of interest for the ToF-camera.
-  virtual i3ds_asn1::PlanarRegion region() const {return {0,0,0,0};}
+    // Get the region of interest for the ToF-camera.
+    virtual i3ds_asn1::PlanarRegion region() const {return {0,0,0,0};}
 
-  // Get the min range configuration of the ToF-camera.
-  virtual double range_min_depth() const {return 0.0;}
+    // Get the min range configuration of the ToF-camera.
+    virtual double range_min_depth() const {return 0.0;}
 
-  // Get the max range configuration of the ToF-camera.
-  virtual double range_max_depth() const {return 1.0e6;}
+    // Get the max range configuration of the ToF-camera.
+    virtual double range_max_depth() const {return 1.0e6;}
 
-  // Attach handlers to the server.
-  virtual void Attach(Server& server);
-*/
-protected:
+    // Attach handlers to the server.
+    virtual void Attach(Server& server);
+  */
+  protected:
   // Constant parameters for Vzense camera.
   const Parameters param_;
 
-/* UNIMPLEMENTED METHODS:
+  /* UNIMPLEMENTED METHODS:
 
-  // Handler for ToF-camera region of interest command.
-  virtual void handle_region(ToFCamera::RegionService::Data& command);
+    // Handler for ToF-camera region of interest command.
+    virtual void handle_region(ToFCamera::RegionService::Data& command);
 
-  // Handler for ToF-camera range command.
-  virtual void handle_range(ToFCamera::RangeService::Data& command);
+    // Handler for ToF-camera range command.
+    virtual void handle_range(ToFCamera::RangeService::Data& command);
 
-  // Handler for camera configuration query.
-  virtual void handle_configuration(ToFCamera::ConfigurationService::Data& config);
-*/
-private:
+    // Handler for camera configuration query.
+    virtual void handle_configuration(ToFCamera::ConfigurationService::Data&
+    config);
+  */
+  private:
   bool get_depth_frame(uint32_t slope);
   uint32_t session_index_;
   PsDeviceHandle device_handle_ = nullptr;
 };
 
-} // namespace i3ds
+}  // namespace i3ds
 
 #endif  // __VZENSE_CAMERA_HPP
