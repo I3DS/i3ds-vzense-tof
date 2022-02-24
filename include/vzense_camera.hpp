@@ -11,9 +11,12 @@
 #ifndef __VZENSE_CAMERA_HPP
 #define __VZENSE_CAMERA_HPP
 
-#include <i3ds/tof_camera_sensor.hpp>
+#include <thread>
 
 #include "Vzense_api2.h"
+
+#include <i3ds/publisher.hpp>
+#include <i3ds/tof_camera_sensor.hpp>
 
 namespace i3ds {
 
@@ -25,11 +28,11 @@ class VzenseCamera : public ToFCamera {
   };
 
   // Constructor and destructor.
-  VzenseCamera(i3ds_asn1::NodeID node, const Parameters &param);
+  VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters &param);
   ~VzenseCamera() {}
 
   bool is_sampling_supported(i3ds_asn1::SampleCommand sample) {
-    // TODO(sigurdm): implement
+    // TODO(sigurdm): Not sure what this means
     return false;
   }
 
@@ -75,9 +78,20 @@ class VzenseCamera : public ToFCamera {
     config);
   */
   private:
-  bool get_depth_frame(uint32_t slope);
+
+  bool get_depth_frame();
+  void sample_loop();
+  void send_sample(const uint16_t *data, uint width, uint height);
+
+  uint32_t slope_;
+
+  std::thread sampler_;
+  bool sampler_running_;
+  
   uint32_t session_index_;
   PsDeviceHandle device_handle_ = nullptr;
+
+  Publisher publisher_;
 };
 
 }  // namespace i3ds

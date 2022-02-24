@@ -25,6 +25,7 @@
 #include <boost/log/trivial.hpp>
 
 #include <opencv2/opencv.hpp>
+#include <i3ds/time.hpp>
 
 namespace logging = boost::log;
 
@@ -37,6 +38,67 @@ bool initialize_vzense() {
   }
   BOOST_LOG_TRIVIAL(debug) << "Ps initialized.";
   return true;
+}
+
+const char* returnStatus2string(PsReturnStatus status) {
+  switch (status) {
+    case PsRetOK:
+      return "OK";
+    case PsRetNoDeviceConnected:
+      return "NoDeviceConnected";
+    case PsRetInvalidDeviceIndex:
+      return "InvalidDeviceIndex";
+    case PsRetDevicePointerIsNull:
+      return "DevicePointerIsNull";
+    case PsRetInvalidFrameType:
+      return "InvalidFrameType";
+    case PsRetFramePointerIsNull:
+      return "FramePointerIsNull";
+    case PsRetNoPropertyValueGet:
+      return "NoPropertyValueGet";
+    case PsRetNoPropertyValueSet:
+      return "NoPropertyValueSet";
+    case PsRetPropertyPointerIsNull:
+      return "PropertyPointerIsNull";
+    case PsRetPropertySizeNotEnough:
+      return "PropertySizeNotEnough";
+    case PsRetInvalidDepthRange:
+      return "InvalidDepthRange";
+    case PsRetReadNextFrameTimeOut:
+      return "ReadNextFrameTimeOut";
+    case PsRetInputPointerIsNull:
+      return "InputPointerIsNull";
+    case PsRetCameraNotOpened:
+      return "CameraNotOpened";
+    case PsRetInvalidCameraType:
+      return "InvalidCameraType";
+    case PsRetInvalidParams:
+      return "InvalidParams";
+    case PsRetCurrentVersionNotSupport:
+      return "CurrentVersionNotSupport";
+    case PsRetUpgradeImgError:
+      return "UpgradeImgError";
+    case PsRetUpgradeImgPathTooLong:
+      return "UpgradeImgPathTooLong";
+    case PsRetUpgradeCallbackNotSet:
+      return "UpgradeCallbackNotSet";
+    case PsRetNoAdapterConnected:
+      return "NoAdapterConnected";
+    case PsRetReInitialized:
+      return "ReInitialized";
+    case PsRetNoInitialized:
+      return "NoInitialized";
+    case PsRetCameraOpened:
+      return "CameraOpened";
+    case PsRetCmdError:
+      return "CmdError";
+    case PsRetCmdSyncTimeOut:
+      return "CmdSyncTimeOut";
+    case PsRetOthers:
+      return "Others";
+    default:
+      return "Undefined";
+  }
 }
 
 const char* connectStatus2string(PsConnectStatus status) {
@@ -179,7 +241,7 @@ bool connect_to_device(std::string camera_name, PsDeviceHandle& deviceHandle) {
   uint32_t deviceCount = 0;
   PsReturnStatus status = Ps2_GetDeviceCount(&deviceCount);
   if (status != PsReturnStatus::PsRetOK) {
-    BOOST_LOG_TRIVIAL(warning) << "PsGetDeviceCount failed! make sure the DCAM is connected";
+    BOOST_LOG_TRIVIAL(warning) << "PsGetDeviceCount failed: " << returnStatus2string(status);
     return false;
   }
   BOOST_LOG_TRIVIAL(debug) << "Found " << deviceCount << " devices.";
@@ -190,7 +252,7 @@ bool connect_to_device(std::string camera_name, PsDeviceHandle& deviceHandle) {
   PsDeviceInfo pDeviceListInfo[deviceCount];
   status = Ps2_GetDeviceListInfo(pDeviceListInfo, deviceCount);
   if (status != PsReturnStatus::PsRetOK) {
-    BOOST_LOG_TRIVIAL(error) << "Could not get device info!";
+    BOOST_LOG_TRIVIAL(error) << "Could not get device info: " << returnStatus2string(status);
     return false;
   }
 
@@ -230,13 +292,12 @@ static void Opencv_Depth(uint32_t slope, int height, int width, uint8_t* pData, 
   circle(dispImg, pointxy, 4, cv::Scalar(color, color, color), -1, 8, 0);
   putText(dispImg, text, pointxy, cv::FONT_HERSHEY_DUPLEX, 2, cv::Scalar(color, color, color));
 }
-
-bool i3ds::VzenseCamera::get_depth_frame(uint32_t slope) {
+bool i3ds::VzenseCamera::get_depth_frame() {
   PsFrame depthFrame = {0};
   PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
 
-  if (depthFrame.pFrameData == NULL) {
-    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << status << " pFrameData is NULL ";
+  if (status != PsRetOK || depthFrame.pFrameData == NULL) {
+    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
     return false;
   }
 
@@ -245,12 +306,12 @@ bool i3ds::VzenseCamera::get_depth_frame(uint32_t slope) {
 
   cv::imshow("Depth", imageMat);
 
+  send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
   return true;
 }
 
-i3ds::VzenseCamera::VzenseCamera(i3ds_asn1::NodeID node, const Parameters& param)
-    : i3ds::ToFCamera(node), param_(param) {
-}
+i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters& param)
+    : i3ds::ToFCamera(node), param_(param), publisher_ (context, node ) {}
 
 void i3ds::VzenseCamera::do_activate() {
   if (!initialize_vzense()) {
@@ -286,9 +347,9 @@ void i3ds::VzenseCamera::do_start() {
   session_index_ = 0;
 
   auto status = Ps2_StartStream(device_handle_, session_index_);
-
+  
   if (status != PsReturnStatus::PsRetOK) {
-    BOOST_LOG_TRIVIAL(warning) << "StartStream failed: " << status;
+    BOOST_LOG_TRIVIAL(warning) << "StartStream failed: " << returnStatus2string(status);
     throw i3ds::DeviceError("Failed to start stream.");
   }
 
@@ -313,12 +374,12 @@ void i3ds::VzenseCamera::do_start() {
 
   status = Ps2_SetDepthRange(device_handle_, session_index_, PsFarRange);
   if (status != PsReturnStatus::PsRetOK) {
-    BOOST_LOG_TRIVIAL(warning) << "Failed to set range: " << dataMode2str(dataMode);
+    BOOST_LOG_TRIVIAL(warning) << "Failed to set range: " << returnStatus2string(status);
   }
 
   status = Ps2_GetDepthRange(device_handle_, session_index_, &depth_range);
   if (status != PsReturnStatus::PsRetOK) {
-    BOOST_LOG_TRIVIAL(warning) << "Failed to get range: " << dataMode2str(dataMode);
+    BOOST_LOG_TRIVIAL(warning) << "Failed to get range: " << returnStatus2string(status);
     Ps2_StopStream(device_handle_, session_index_);
     throw i3ds::DeviceError("Could not get the depth range of the camera.");
   }
@@ -327,21 +388,33 @@ void i3ds::VzenseCamera::do_start() {
   PsMeasuringRange measuringrange = {0};
   status = Ps2_GetMeasuringRange(device_handle_, session_index_, depth_range, &measuringrange);
 
-  auto slope = range_to_slope(depth_range, measuringrange);
-  BOOST_LOG_TRIVIAL(info) << "Slope is: " << slope;
+  slope_ = range_to_slope(depth_range, measuringrange);
+  BOOST_LOG_TRIVIAL(info) << "Slope is: " << slope_;
+
+  sampler_ = std::thread(&i3ds::VzenseCamera::sample_loop, this);
+}
+
+void i3ds::VzenseCamera::sample_loop() {
+  sampler_running_ = true;
 
   // Handle the frames
   PsFrameReady frameReady = {0};
+  while (sampler_running_) {
+    auto status = Ps2_ReadNextFrame(device_handle_, session_index_, &frameReady);
 
-  bool running = true;
-  while (running) {
-    status = Ps2_ReadNextFrame(device_handle_, session_index_, &frameReady);
+    if (status != PsRetOK) {
+      BOOST_LOG_TRIVIAL(error) << "Error reading frame: " << returnStatus2string(status);
+      break;
+    }
 
     if (1 == frameReady.depth) {
-      get_depth_frame(slope);
+      get_depth_frame();
     }
 
     unsigned char key = cv::waitKey(1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+}
 
     switch (key) {
       case 'q':
@@ -349,14 +422,31 @@ void i3ds::VzenseCamera::do_start() {
         running = false;
         break;
     }
+void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint height) {
+  ToFCamera::MeasurementTopic::Data frame;
+  ToFCamera::MeasurementTopic::Codec::Initialize(frame);
+
+  frame.descriptor.attributes.timestamp = get_timestamp();
+
+  frame.descriptor.width = width;
+  frame.descriptor.height = height;
+  const uint size = width * height;
+  frame.depths.resize(size);
+  for (size_t i = 0; i < size; i++) {
+    frame.depths[i] = static_cast<float>(data[i]);
   }
+
+  publisher_.Send<ToFCamera::MeasurementTopic> (frame);
 }
 
 void i3ds::VzenseCamera::do_stop() {
+  sampler_running_ = false;
   auto status = Ps2_StopStream(device_handle_, session_index_);
 
   if (status != PsReturnStatus::PsRetOK) {
-    BOOST_LOG_TRIVIAL(warning) << "Failed stopping stream: " << status;
+    BOOST_LOG_TRIVIAL(warning) << "Failed stopping stream: " << returnStatus2string(status);
     throw i3ds::DeviceError("Failed to stop stream.");
   }
+
+  sampler_.join();
 }

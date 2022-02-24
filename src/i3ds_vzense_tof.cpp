@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 
   i3ds::Server server(context);
 
-  i3ds::VzenseCamera camera(node_id, param);
+  i3ds::VzenseCamera camera(context, node_id, param);
 
   camera.Attach(server);
 
@@ -90,6 +90,9 @@ int main(int argc, char** argv) {
   signal(SIGINT, signal_handler);
 
   server.Start();
+
+  camera.do_activate();
+  camera.do_start();
 
   while (running) {
     sleep(1);
