@@ -27,27 +27,14 @@
 #include <i3ds/time.hpp>
 
 #include "vzense_enum2str.hpp"
-#include "vzense_wrapper.hpp"
+#include "vzense_helpers.hpp"
 
 namespace logging = boost::log;
-
-bool i3ds::VzenseCamera::get_depth_frame() {
-  PsFrame depthFrame = {0};
-  PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
-
-  if (status != PsRetOK || depthFrame.pFrameData == NULL) {
-    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
-    return false;
-  }
-
-  send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
-  return true;
-}
 
 i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters& param)
     : i3ds::ToFCamera(node), param_(param), publisher_(context, node) {}
 
-// Get the min range configuration of the ToF-camera.
+
 double i3ds::VzenseCamera::range_min_depth() {
   PsDepthRange depth_range;
   auto status = Ps2_GetDepthRange(device_handle_, session_index_, &depth_range);
@@ -79,7 +66,7 @@ double i3ds::VzenseCamera::range_min_depth() {
   }
 }
 
-// Get the max range configuration of the ToF-camera.
+
 double i3ds::VzenseCamera::range_max_depth() {
   PsDepthRange depth_range;
   auto status = Ps2_GetDepthRange(device_handle_, session_index_, &depth_range);
@@ -108,12 +95,14 @@ double i3ds::VzenseCamera::range_max_depth() {
   }
 }
 
+
 void set_asn_string(i3ds_asn1::T_String& dst, const std::string txt) {
   auto msg_arr = reinterpret_cast<char*>(dst.arr);
   strncpy(msg_arr, txt.c_str(), 40);
   msg_arr[39] = '\0';
   dst.nCount = strlen(msg_arr);
 }
+
 
 void i3ds::VzenseCamera::handle_range(ToFCamera::RangeService::Data& command) {
   BOOST_LOG_TRIVIAL(info) << "Setting range:";
@@ -164,20 +153,24 @@ void i3ds::VzenseCamera::handle_range(ToFCamera::RangeService::Data& command) {
 
   wanted_range_ = depth_range;
 
-  // TODO(sigurdal): If the stream is started we can run this to update it live.
-  auto status = Ps2_SetDepthRange(device_handle_, session_index_, depth_range);
-  if (status == PsRetDevicePointerIsNull) {
-    // We are likely not connected and the range will be set when we start the stream.
-  } else if (status != PsRetOK) {
-    command.response.result = i3ds_asn1::ResultCode_error_other;
-    BOOST_LOG_TRIVIAL(error) << "Could not set range to " << depth_range << ": " << returnStatus2string(status);
+  // If the stream is started we can run this to update it live. If not, we're done.
+  if (state() != i3ds_asn1::SensorState_operational) {
+    command.response.result = i3ds_asn1::ResultCode_success;
     return;
   }
-
-  command.response.result = i3ds_asn1::ResultCode_success;
+  
+  auto status = Ps2_SetDepthRange(device_handle_, session_index_, depth_range);
+  if (status != PsRetOK) {
+    command.response.result = i3ds_asn1::ResultCode_error_other;
+    BOOST_LOG_TRIVIAL(error) << "Could not set range to " << depth_range << ": " << returnStatus2string(status);
+    set_asn_string(command.response.message, "Restart stream to update range.");
+    return;
+  }
 }
 
+
 void i3ds::VzenseCamera::do_activate() {
+  BOOST_LOG_TRIVIAL(debug) << "Activating Vzense";
   if (!initialize_vzense()) {
     throw i3ds::DeviceError("Could not initialize Vzense driver.");
   }
@@ -199,14 +192,20 @@ void i3ds::VzenseCamera::do_activate() {
     BOOST_LOG_TRIVIAL(error) << "Could not connect to camera";
     throw i3ds::DeviceError("Could not connect to camera.");
   }
+  BOOST_LOG_TRIVIAL(info) << "Activated Vzense";
 }
+
 
 void i3ds::VzenseCamera::do_deactivate() {
+  BOOST_LOG_TRIVIAL(debug) << "Deactivating Vzense";
   Ps2_CloseDevice(&device_handle_);
   Ps2_Shutdown();
+  BOOST_LOG_TRIVIAL(info) << "Deactivated Vzense";
 }
 
+
 void i3ds::VzenseCamera::do_start() {
+  BOOST_LOG_TRIVIAL(debug) << "Starting Vzense";
   session_index_ = 0;
 
   auto status = Ps2_StartStream(device_handle_, session_index_);
@@ -246,15 +245,14 @@ void i3ds::VzenseCamera::do_start() {
     throw i3ds::DeviceError("Could not get the depth range of the camera.");
   }
 
-  // Get required parameters
-  PsMeasuringRange measuringrange = {0};
-  status = Ps2_GetMeasuringRange(device_handle_, session_index_, depth_range, &measuringrange);
-
-  slope_ = range_to_slope(depth_range, measuringrange);
-  BOOST_LOG_TRIVIAL(info) << "Slope is: " << slope_;
+  if (depth_range != wanted_range_) {
+    BOOST_LOG_TRIVIAL(warning) << "Unexpected depth range. ";
+  }
 
   sampler_ = std::thread(&i3ds::VzenseCamera::sample_loop, this);
+  BOOST_LOG_TRIVIAL(info) << "Started Vzense";
 }
+
 
 void i3ds::VzenseCamera::sample_loop() {
   sampler_running_ = true;
@@ -269,38 +267,24 @@ void i3ds::VzenseCamera::sample_loop() {
       break;
     }
 
-    if (1 == frameReady.depth) {
-      get_depth_frame();
+    if (frameReady.depth == 1) {
+      PsFrame depthFrame = {0};
+      PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
+
+      if (status == PsRetOK && depthFrame.pFrameData != NULL) {
+        send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
+      } else {
+        BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
+      }
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 
-void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint height) {
-  ToFCamera::MeasurementTopic::Data frame;
-  ToFCamera::MeasurementTopic::Codec::Initialize(frame);
-
-  frame.descriptor.attributes.timestamp = get_timestamp();
-
-  frame.descriptor.width = width;
-  frame.descriptor.height = height;
-  frame.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
-
-  const uint size = width * height;
-  frame.depths.resize(size);
-  for (size_t i = 0; i < size; i++) {
-    if (data[i] == 0xffff) {
-      frame.depths[i] = -1;
-      continue;
-    }
-    frame.depths[i] = static_cast<float>(data[i]) / 1000.0f;
-  }
-
-  publisher_.Send<ToFCamera::MeasurementTopic>(frame);
-}
 
 void i3ds::VzenseCamera::do_stop() {
+  BOOST_LOG_TRIVIAL(debug) << "Stopping Vzense";
   sampler_running_ = false;
   auto status = Ps2_StopStream(device_handle_, session_index_);
 
@@ -310,4 +294,28 @@ void i3ds::VzenseCamera::do_stop() {
   }
 
   sampler_.join();
+  BOOST_LOG_TRIVIAL(info) << "Stopped Vzense";
+}
+
+
+void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint height) {
+  ToFCamera::MeasurementTopic::Data frame;
+  ToFCamera::MeasurementTopic::Codec::Initialize(frame);
+
+  frame.descriptor.attributes.timestamp = get_timestamp();
+  frame.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
+  frame.descriptor.width = width;
+  frame.descriptor.height = height;
+
+  const uint size = width * height;
+  frame.depths.resize(size);
+  for (size_t i = 0; i < size; i++) {
+    if (data[i] == 0xffff) {
+      frame.depths[i] = -1;
+      continue;
+    }
+    frame.depths[i] = static_cast<float>(data[i]) / 1000.0f; // Scale from [mm] to [m]
+  }
+
+  publisher_.Send<ToFCamera::MeasurementTopic>(frame);
 }

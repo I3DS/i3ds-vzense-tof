@@ -26,29 +26,6 @@ bool initialize_vzense() {
   return true;
 }
 
-uint32_t range_to_slope(PsDepthRange depth_range, PsMeasuringRange measuring_range) {
-  switch (depth_range) {
-    case PsNearRange:
-    case PsXNearRange:
-    case PsXXNearRange:
-      return measuring_range.effectDepthMaxNear;
-
-    case PsMidRange:
-    case PsXMidRange:
-    case PsXXMidRange:
-      return measuring_range.effectDepthMaxMid;
-
-    case PsFarRange:
-    case PsXFarRange:
-    case PsXXFarRange:
-
-      return measuring_range.effectDepthMaxFar;
-    default:
-      BOOST_LOG_TRIVIAL(error) << "Could not get slope from range: " << depth_range;
-      return 0;
-  }
-}
-
 void print_camera_parameters(PsDeviceHandle deviceHandle, uint32_t sessionIndex) {
   PsCameraParameters cameraParameters;
   auto status = Ps2_GetCameraParameters(deviceHandle, sessionIndex, PsDepthSensor, &cameraParameters);

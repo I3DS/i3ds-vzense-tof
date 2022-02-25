@@ -58,11 +58,8 @@ class VzenseCamera : public ToFCamera {
   virtual void handle_range(ToFCamera::RangeService::Data& command);
   
   private:
-  bool get_depth_frame();
   void sample_loop();
   void send_sample(const uint16_t *data, uint width, uint height);
-
-  uint32_t slope_;
 
   std::thread sampler_;
   bool sampler_running_;
