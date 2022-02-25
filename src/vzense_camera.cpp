@@ -45,8 +45,7 @@ bool i3ds::VzenseCamera::get_depth_frame() {
 }
 
 i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters& param)
-    : i3ds::ToFCamera(node), param_(param), publisher_ (context, node ) {}
-
+    : i3ds::ToFCamera(node), param_(param), publisher_(context, node) {}
 
 // Get the min range configuration of the ToF-camera.
 double i3ds::VzenseCamera::range_min_depth() {
@@ -109,11 +108,11 @@ double i3ds::VzenseCamera::range_max_depth() {
   }
 }
 
-void set_asn_string(i3ds_asn1::T_String &dst, const std::string txt) {
-    auto msg_arr = reinterpret_cast<char *>(dst.arr);
-    strncpy(msg_arr, txt.c_str(), 40);
-    msg_arr[39] = '\0';
-    dst.nCount = strlen(msg_arr);
+void set_asn_string(i3ds_asn1::T_String& dst, const std::string txt) {
+  auto msg_arr = reinterpret_cast<char*>(dst.arr);
+  strncpy(msg_arr, txt.c_str(), 40);
+  msg_arr[39] = '\0';
+  dst.nCount = strlen(msg_arr);
 }
 
 void i3ds::VzenseCamera::handle_range(ToFCamera::RangeService::Data& command) {
@@ -130,9 +129,7 @@ void i3ds::VzenseCamera::handle_range(ToFCamera::RangeService::Data& command) {
     req_max = 0;
   }
 
-
   command.response.result = i3ds_asn1::ResultCode_success;
-
 
   // Try to translate from requested min/max depth to PsDepthRange
   PsDepthRange depth_range = PsUnknown;
@@ -159,20 +156,21 @@ void i3ds::VzenseCamera::handle_range(ToFCamera::RangeService::Data& command) {
   }
 
   if (command.response.result != i3ds_asn1::ResultCode_success) {
-    BOOST_LOG_TRIVIAL(warning) << "Could not set range - invalid range: [" << command.request.min_depth << ", " << command.request.max_depth << "]";
+    BOOST_LOG_TRIVIAL(warning) << "Could not set range - invalid range: [" << command.request.min_depth << ", "
+                               << command.request.max_depth << "]";
     set_asn_string(command.response.message, "Valid ranges: .35-1.5, .5-2.8, .8-4.4");
     return;
   }
 
   wanted_range_ = depth_range;
 
-  //TODO(sigurdal): If the stream is started we can run this to update it live.
+  // TODO(sigurdal): If the stream is started we can run this to update it live.
   auto status = Ps2_SetDepthRange(device_handle_, session_index_, depth_range);
   if (status == PsRetDevicePointerIsNull) {
     // We are likely not connected and the range will be set when we start the stream.
-  }else if (status != PsRetOK) {
+  } else if (status != PsRetOK) {
     command.response.result = i3ds_asn1::ResultCode_error_other;
-    BOOST_LOG_TRIVIAL(error) << "Could not set range to " << depth_range << ": " << returnStatus2string(status); 
+    BOOST_LOG_TRIVIAL(error) << "Could not set range to " << depth_range << ": " << returnStatus2string(status);
     return;
   }
 
@@ -299,7 +297,7 @@ void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint heig
     frame.depths[i] = static_cast<float>(data[i]) / 1000.0f;
   }
 
-  publisher_.Send<ToFCamera::MeasurementTopic> (frame);
+  publisher_.Send<ToFCamera::MeasurementTopic>(frame);
 }
 
 void i3ds::VzenseCamera::do_stop() {
