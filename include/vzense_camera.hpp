@@ -44,41 +44,20 @@ class VzenseCamera : public ToFCamera {
 
   void do_stop();
 
-  /* UNIMPLEMENTED METHODS from ToFCamera
+  // Get the min range configuration of the ToF-camera.
+  double range_min_depth();
 
-    // Get the region of interest enabled for ToF-camera.
-    virtual bool region_enabled() const {return false;}
+  // Get the max range configuration of the ToF-camera.
+  double range_max_depth();
 
-    // Get the region of interest for the ToF-camera.
-    virtual i3ds_asn1::PlanarRegion region() const {return {0,0,0,0};}
-
-    // Get the min range configuration of the ToF-camera.
-    virtual double range_min_depth() const {return 0.0;}
-
-    // Get the max range configuration of the ToF-camera.
-    virtual double range_max_depth() const {return 1.0e6;}
-
-    // Attach handlers to the server.
-    virtual void Attach(Server& server);
-  */
   protected:
   // Constant parameters for Vzense camera.
   const Parameters param_;
 
-  /* UNIMPLEMENTED METHODS:
-
-    // Handler for ToF-camera region of interest command.
-    virtual void handle_region(ToFCamera::RegionService::Data& command);
-
-    // Handler for ToF-camera range command.
-    virtual void handle_range(ToFCamera::RangeService::Data& command);
-
-    // Handler for camera configuration query.
-    virtual void handle_configuration(ToFCamera::ConfigurationService::Data&
-    config);
-  */
+  // Handler for ToF-camera range command.
+  virtual void handle_range(ToFCamera::RangeService::Data& command);
+  
   private:
-
   bool get_depth_frame();
   void sample_loop();
   void send_sample(const uint16_t *data, uint width, uint height);
@@ -90,6 +69,8 @@ class VzenseCamera : public ToFCamera {
   
   uint32_t session_index_;
   PsDeviceHandle device_handle_ = nullptr;
+
+  PsDepthRange wanted_range_ = PsNearRange;
 
   Publisher publisher_;
 };
