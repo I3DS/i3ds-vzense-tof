@@ -1,0 +1,3 @@
+[submodule "thirdparty/Vzense_SDK_Linux"]
+	path = thirdparty/Vzense_SDK_Linux
+	url = https://github.com/Vzense/Vzense_SDK_Linux
