@@ -8,47 +8,46 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <csignal>
-#include <iostream>
 #include <unistd.h>
-#include <string>
-#include <vector>
+
+#include <csignal>
+#include <cstddef>
+#include <iostream>
 #include <memory>
-
-#include <boost/program_options.hpp>
-
-#include <i3ds/exception.hpp>
-#include <i3ds/configurator.hpp>
-#include "i3ds/communication.hpp"
-#include "vzense_camera.hpp"
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 #ifndef BOOST_LOG_DYN_LINK
 #define BOOST_LOG_DYN_LINK
-#endif // BOOST_LOG_DYN_LINK
+#endif  // BOOST_LOG_DYN_LINK
 
 #include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/program_options.hpp>
 
-#include <cstddef>
-#include <memory>
-#include <type_traits>
-#include <utility>
+#include <i3ds/communication.hpp>
+#include <i3ds/configurator.hpp>
+#include <i3ds/exception.hpp>
+
+#include "vzense_camera.hpp"
 
 namespace po = boost::program_options;
 namespace logging = boost::log;
 
 volatile bool running;
 
-void signal_handler(int signum)
-{
+void signal_handler(int signum) {
   BOOST_LOG_TRIVIAL(info) << "do_deactivate()";
   running = false;
 }
 
-struct counter { int count = 0; };
-void validate(boost::any& v, std::vector<std::string> const& xs, counter*, long)
-{
+struct counter {
+  int count = 0;
+};
+void validate(boost::any& v, std::vector<std::string> const& xs, counter*, long) {
   if (v.empty()) {
     counter num;
     num.count = 1;
@@ -58,8 +57,7 @@ void validate(boost::any& v, std::vector<std::string> const& xs, counter*, long)
   }
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   unsigned int node_id;
 
   i3ds::VzenseCamera::Parameters param;
@@ -70,9 +68,7 @@ int main(int argc, char** argv)
 
   desc.add_options()
   ("node,n", po::value<unsigned int>(&node_id)->default_value(10), "Node ID of camera")
-
   ("camera-name,c", po::value<std::string>(&param.camera_name), "Connect via (UserDefinedName) of Camera")
-
   ("print,p", "Print the camera configuration")
   ;
 
@@ -82,11 +78,11 @@ int main(int argc, char** argv)
   BOOST_LOG_TRIVIAL(info) << "ToF name: " << param.camera_name;
   BOOST_LOG_TRIVIAL(info) << "ToF type: Vzense";
 
-  i3ds::Context::Ptr context = i3ds::Context::Create();;
+  i3ds::Context::Ptr context = i3ds::Context::Create();
 
   i3ds::Server server(context);
 
-  i3ds::VzenseCamera camera(node_id, param);
+  i3ds::VzenseCamera camera(context, node_id, param);
 
   camera.Attach(server);
 
@@ -95,12 +91,10 @@ int main(int argc, char** argv)
 
   server.Start();
 
-  while (running)
-    {
-      sleep(1);
-    }
+  while (running) {
+    sleep(1);
+  }
 
   server.Stop();
-
   return 0;
 }
