@@ -20,9 +20,7 @@ endif (NOT VZENSE_INCLUDE)
 set(VZENSE_LDLIBS "-lvzense_api")
 
 set (LIBS
-  i3ds
-  i3ds_asn1
-  i3ds_clients
+  ${I3DS_LIBS}
   zmq
   pthread
   ${VZENSE_LIBS}
@@ -31,6 +29,7 @@ set (LIBS
 
 
 include_directories ("../include/")
+include_directories (SYSTEM ${I3DS_INCLUDE})
 include_directories (${VZENSE_INCLUDE})
 
 

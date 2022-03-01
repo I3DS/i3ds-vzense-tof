@@ -18,6 +18,7 @@ enable_testing ()
 # Builds for embedded systems are not tested
 option(BUILD_EMBEDDED "Build for embedded systems" OFF)
 option(BUILD_DEBUG "Enable debug-build with lots and lots of warnings" OFF)
+option(I3DS_FRAMEWORK_DIR "Custom directory for i3ds (uses \"external\" ASN.1 messages)")
 
 if (BUILD_EMBEDDED)
   MESSAGE(WARNING "Building Vzense for embedded systems is untested")
@@ -33,6 +34,22 @@ if (BUILD_EMBEDDED)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --sysroot=${CMAKE_FIND_ROOT_PATH}")
   endif ()
 endif (BUILD_EMBEDDED)
+
+# Find i3ds dependencies
+find_library(I3DS_MAIN_LIB i3ds HINTS ${I3DS_FRAMEWORK_DIR} PATH_SUFFIXES build/libi3ds)
+find_library(I3DS_CLIENT_LIB i3ds_clients HINTS ${I3DS_FRAMEWORK_DIR} PATH_SUFFIXES build/clients)
+find_library(I3DS_ASN1_LIB i3ds_asn1 HINTS ${I3DS_FRAMEWORK_DIR} PATH_SUFFIXES external/lib)
+find_path(I3DS_COMMUNICATION_HPP_DIR i3ds/communication.hpp HINTS ${I3DS_FRAMEWORK_DIR} PATH_SUFFIXES libi3ds/include)
+find_path(I3DS_SENSOR_CLIENT_HPP_DIR i3ds/sensor_client.hpp HINTS ${I3DS_FRAMEWORK_DIR} PATH_SUFFIXES clients/include)
+find_path(I3DS_ASN1_HPP_DIR i3ds_asn1/Common.hpp HINTS ${I3DS_FRAMEWORK_DIR} PATH_SUFFIXES external/include)
+
+set(I3DS_LIBS ${I3DS_MAIN_LIB} ${I3DS_CLIENT_LIB} ${I3DS_ASN1_LIB})
+set(I3DS_INCLUDE ${I3DS_COMMUNICATION_HPP_DIR} ${I3DS_ASN1_HPP_DIR} ${I3DS_SENSOR_CLIENT_HPP_DIR})
+
+if(NOT(I3DS_MAIN_LIB AND I3DS_CLIENT_LIB AND I3DS_ASN1_LIB AND I3DS_COMMUNICATION_HPP_DIR AND I3DS_SENSOR_CLIENT_HPP_DIR AND I3DS_ASN1_HPP_DIR))
+  MESSAGE(FATAL_ERROR "Could not find some of the required i3ds libraries: ${I3DS_LIBS} ${I3DS_INCLUDE}")
+endif()
+
 
 ################################################################################
 # Check that the C++ compiler supports C++11 or C++0X, else issue warning.
