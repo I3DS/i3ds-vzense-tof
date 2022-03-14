@@ -318,4 +318,5 @@ void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint heig
   }
 
   publisher_.Send<ToFCamera::MeasurementTopic>(frame);
+  update_and_check_batch_count();
 }
