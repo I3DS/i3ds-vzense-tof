@@ -15,7 +15,7 @@
 
 #include "Vzense_api2.h"
 
-bool initialize_vzense() {
+inline bool initialize_vzense() {
   PsReturnStatus status = Ps2_Initialize();
 
   if (status != PsReturnStatus::PsRetOK) {
@@ -26,7 +26,7 @@ bool initialize_vzense() {
   return true;
 }
 
-void print_camera_parameters(PsDeviceHandle deviceHandle, uint32_t sessionIndex) {
+inline void print_camera_parameters(PsDeviceHandle deviceHandle, uint32_t sessionIndex) {
   PsCameraParameters cameraParameters;
   auto status = Ps2_GetCameraParameters(deviceHandle, sessionIndex, PsDepthSensor, &cameraParameters);
 
@@ -47,7 +47,7 @@ void print_camera_parameters(PsDeviceHandle deviceHandle, uint32_t sessionIndex)
   BOOST_LOG_TRIVIAL(info) << "K6: " << cameraParameters.k6;
 }
 
-void log_device_info(PsDeviceInfo pDeviceListInfo[], int deviceCount) {
+inline void log_device_info(PsDeviceInfo pDeviceListInfo[], int deviceCount) {
   for (BOOST_TYPEOF(deviceCount) i = 0; i < deviceCount; i++) {
     BOOST_LOG_TRIVIAL(debug) << "Camera " << i << ":";
     BOOST_LOG_TRIVIAL(debug) << "  Device type:" << pDeviceListInfo[i].devicetype;
@@ -58,7 +58,7 @@ void log_device_info(PsDeviceInfo pDeviceListInfo[], int deviceCount) {
   }
 }
 
-const char* find_device_uri(std::string camera_name, PsDeviceInfo pDeviceListInfo[], int deviceCount) {
+inline const char* find_device_uri(std::string camera_name, PsDeviceInfo pDeviceListInfo[], int deviceCount) {
   log_device_info(pDeviceListInfo, deviceCount);
 
   if (camera_name == "first") {
@@ -101,7 +101,7 @@ const char* find_device_uri(std::string camera_name, PsDeviceInfo pDeviceListInf
   return nullptr;
 }
 
-bool connect_to_device(std::string camera_name, PsDeviceHandle *deviceHandle) {
+inline bool connect_to_device(std::string camera_name, PsDeviceHandle *deviceHandle) {
   uint32_t deviceCount = 0;
   PsReturnStatus status = Ps2_GetDeviceCount(&deviceCount);
   if (status != PsReturnStatus::PsRetOK) {

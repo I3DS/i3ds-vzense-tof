@@ -13,7 +13,7 @@
 
 #include "Vzense_api2.h"
 
-const char* returnStatus2string(PsReturnStatus status) {
+inline const char* returnStatus2string(PsReturnStatus status) {
   switch (status) {
     case PsRetOK:
       return "OK";
@@ -74,7 +74,7 @@ const char* returnStatus2string(PsReturnStatus status) {
   }
 }
 
-const char* connectStatus2string(PsConnectStatus status) {
+inline const char* connectStatus2string(PsConnectStatus status) {
   switch (status) {
     case ConnectUNKNOWN:
       return "Unknown";
@@ -89,7 +89,7 @@ const char* connectStatus2string(PsConnectStatus status) {
   }
 }
 
-const char* dataMode2str(PsDataMode mode) {
+inline const char* dataMode2str(PsDataMode mode) {
   switch (mode) {
     case PsDepthAndRGB_30:
       return "DepthAndRGB_30";
