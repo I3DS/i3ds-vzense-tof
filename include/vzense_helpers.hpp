@@ -14,6 +14,7 @@
 #include <boost/log/trivial.hpp>
 
 #include "Vzense_api2.h"
+#include "vzense_enum2str.hpp"
 
 inline bool initialize_vzense() {
   PsReturnStatus status = Ps2_Initialize();
@@ -136,6 +137,40 @@ inline bool connect_to_device(std::string camera_name, PsDeviceHandle *deviceHan
   BOOST_LOG_TRIVIAL(info) << "Device opened." << uri;
 
   return true;
+}
+
+inline bool print_available_cameras() {
+	PsReturnStatus ret = Ps2_Initialize();
+	if (ret != PsReturnStatus::PsRetOK) {
+        BOOST_LOG_TRIVIAL(error) << "PsInitialize FAILED with return value: " << ret;
+		return false;
+	}
+
+	unsigned int device_count = 0;
+    ret = Ps2_GetDeviceCount(&device_count);
+    if (ret != PsReturnStatus::PsRetOK) {
+        BOOST_LOG_TRIVIAL(error) << "PsGetDeviceCount FAILED with return value: " << ret;
+        return false;
+    }
+
+    BOOST_LOG_TRIVIAL(info) << "Available devices: " << device_count;
+    if (device_count == 0) {
+        return true;
+    }
+
+    PsDeviceInfo pDeviceListInfo[device_count];
+	ret = Ps2_GetDeviceListInfo(pDeviceListInfo, device_count);
+
+    for (unsigned int i = 0; i < device_count; ++i) {
+        BOOST_LOG_TRIVIAL(info) << "Info about camera: " << i;
+        BOOST_LOG_TRIVIAL(info) << "SessionCount: " << pDeviceListInfo[i].SessionCount;
+        BOOST_LOG_TRIVIAL(info) << "devicetype: " << pDeviceListInfo[i].devicetype; // Device model
+        BOOST_LOG_TRIVIAL(info) << "uri: " << pDeviceListInfo[i].uri; // /dev file
+        BOOST_LOG_TRIVIAL(info) << "fw: " << pDeviceListInfo[i].fw; // Unused?
+        BOOST_LOG_TRIVIAL(info) << "Serial#: " << pDeviceListInfo[i].alias; // Serial number
+        //BOOST_LOG_TRIVIAL(info) << "status: " << connectStatus2string(pDeviceListInfo[i].status);
+    }
+    return true;
 }
 
 #endif  // __VZENSE_WRAPPER_HPP

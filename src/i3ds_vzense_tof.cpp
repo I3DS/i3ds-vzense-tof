@@ -33,6 +33,7 @@
 #include <i3ds/exception.hpp>
 
 #include "vzense_camera.hpp"
+#include "vzense_helpers.hpp"
 
 namespace po = boost::program_options;
 namespace logging = boost::log;
@@ -73,6 +74,11 @@ int main(int argc, char** argv) {
   ;
 
   po::variables_map vm = configurator.parse_common_options(desc, argc, argv);
+
+  if (vm.count("print")) {
+    print_available_cameras();
+    return 0;
+  }
 
   BOOST_LOG_TRIVIAL(info) << "Node ID:     " << node_id;
   BOOST_LOG_TRIVIAL(info) << "ToF name: " << param.camera_name;
