@@ -1,6 +1,5 @@
 ## Installation
 
-1. Make sure OpenCV is installed: `sudo apt install libopencv-dev`
 1. Make sure i3ds-framework-cpp is installed.
 1. Clone this repository (i3ds-vzense-tof) and make sure that the submodules are included, either by adding `--recursive` when first cloning, or by running `git submodule update --init --recursive` in the checked out repository. This ensures that the Vzense driver is downloaded.
 1. Configure and compile
@@ -15,14 +14,20 @@ make
 
 ## Operation
 
-Start the node using `src/i3ds_vzense_tof`. A specific camera can be connected to by supply the `-c CAMERA-NAME` parameter.
+To list available cameras, run the program with the -p argument: `i3ds_vzense_tof -p`. This will print the number of available cameras and the information about them. The serial number is what is used as CAMERA-NAME for the -c argument below. The last few characters of this serial number will also be printed on the label on the device.
+
+Start the node using `src/i3ds_vzense_tof`. A specific camera can be connected to by suppling the `-c CAMERA-NAME` parameter.
 
 To visualize the TOF output, in a new terminal, run: `i3ds_camera_capture --tof 1`
 
 Then activate the TOF using: `i3ds_configure_tof --activate`
 
 Set the wanted range using `i3ds_configure_tof -D NUM` where NUM is 1 (near), 2 (middle), 3 (far).
-
+The NUM argument gives the max range in meters. The vzense camera supports three ranges:
+* Near: 0.35-1.5 m
+* Mid: 0.8-4.4 m
+* Far: 1.2-6.2 m
+ 
 Start the TOF using `i3ds_configure_tof --start`
 
 Stop the TOF using `i3ds_configure_tof --stop`
