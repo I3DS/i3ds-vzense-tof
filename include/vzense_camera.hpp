@@ -63,7 +63,6 @@ class VzenseCamera : public ToFCamera {
   void send_sample(const uint16_t *data, uint width, uint height);
 
   Sampler sampler_;
-  bool sampler_running_;
   
   uint32_t session_index_;
   PsDeviceHandle device_handle_ = nullptr;
