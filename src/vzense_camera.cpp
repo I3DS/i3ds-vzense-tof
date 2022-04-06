@@ -31,8 +31,14 @@
 
 namespace logging = boost::log;
 
-i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters& param)
-    : i3ds::ToFCamera(node), param_(param), publisher_(context, node) {}
+i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters& param) :
+    i3ds::ToFCamera(node),
+    param_(param),
+    sampler_([this](unsigned int ts){return sample_loop(ts);}),
+    publisher_(context, node) 
+{
+  set_device_name(param.camera_name);
+}
 
 
 double i3ds::VzenseCamera::range_min_depth() {
@@ -249,43 +255,40 @@ void i3ds::VzenseCamera::do_start() {
     BOOST_LOG_TRIVIAL(warning) << "Unexpected depth range. ";
   }
 
-  sampler_ = std::thread(&i3ds::VzenseCamera::sample_loop, this);
+  sampler_.Start(period());
   BOOST_LOG_TRIVIAL(info) << "Started Vzense";
 }
 
 
-void i3ds::VzenseCamera::sample_loop() {
-  sampler_running_ = true;
+bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
 
   // Handle the frames
   PsFrameReady frameReady = {0};
-  while (sampler_running_) {
-    auto status = Ps2_ReadNextFrame(device_handle_, session_index_, &frameReady);
+  auto status = Ps2_ReadNextFrame(device_handle_, session_index_, &frameReady);
 
-    if (status != PsRetOK) {
+  if (status != PsRetOK) {
       BOOST_LOG_TRIVIAL(error) << "Error reading frame: " << returnStatus2string(status);
-      break;
-    }
+      return false;
+  }
 
-    if (frameReady.depth == 1) {
+  if (frameReady.depth == 1) {
       PsFrame depthFrame = {0};
       PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
 
       if (status == PsRetOK && depthFrame.pFrameData != NULL) {
-        send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
+          send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
       } else {
-        BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
+          BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
       }
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
+
+  return true;
 }
 
 
 void i3ds::VzenseCamera::do_stop() {
   BOOST_LOG_TRIVIAL(debug) << "Stopping Vzense";
-  sampler_running_ = false;
+  sampler_.Stop();
   auto status = Ps2_StopStream(device_handle_, session_index_);
 
   if (status != PsReturnStatus::PsRetOK) {
@@ -293,7 +296,6 @@ void i3ds::VzenseCamera::do_stop() {
     throw i3ds::DeviceError("Failed to stop stream.");
   }
 
-  sampler_.join();
   BOOST_LOG_TRIVIAL(info) << "Stopped Vzense";
 }
 

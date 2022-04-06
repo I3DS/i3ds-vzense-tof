@@ -17,6 +17,7 @@
 
 #include <i3ds/publisher.hpp>
 #include <i3ds/tof_camera_sensor.hpp>
+#include <i3ds/periodic.hpp>
 
 namespace i3ds {
 
@@ -32,8 +33,8 @@ class VzenseCamera : public ToFCamera {
   ~VzenseCamera() {}
 
   bool is_sampling_supported(i3ds_asn1::SampleCommand sample) {
-    // TODO(sigurdm): Not sure what this means
-    return false;
+    // Frame rate must be between 1 Hz and 30 Hz
+    return 33333 <= sample.period && sample.period <= 1000000;
   }
 
   void do_activate();
@@ -58,10 +59,10 @@ class VzenseCamera : public ToFCamera {
   virtual void handle_range(ToFCamera::RangeService::Data& command);
   
   private:
-  void sample_loop();
+  bool sample_loop(i3ds_asn1::Timepoint timestamp);
   void send_sample(const uint16_t *data, uint width, uint height);
 
-  std::thread sampler_;
+  Sampler sampler_;
   bool sampler_running_;
   
   uint32_t session_index_;
