@@ -46,10 +46,10 @@ class VzenseCamera : public ToFCamera {
   void do_stop();
 
   // Get the min range configuration of the ToF-camera.
-  double range_min_depth();
+  double range_min_depth() const;
 
   // Get the max range configuration of the ToF-camera.
-  double range_max_depth();
+  double range_max_depth() const;
 
   protected:
   // Constant parameters for Vzense camera.

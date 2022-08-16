@@ -29,7 +29,6 @@
 #include "vzense_enum2str.hpp"
 #include "vzense_helpers.hpp"
 
-namespace logging = boost::log;
 
 i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, const Parameters& param) :
     i3ds::ToFCamera(node),
@@ -41,7 +40,7 @@ i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, c
 }
 
 
-double i3ds::VzenseCamera::range_min_depth() {
+double i3ds::VzenseCamera::range_min_depth() const {
   PsDepthRange depth_range;
   auto status = Ps2_GetDepthRange(device_handle_, session_index_, &depth_range);
   if (status != PsRetOK) {
@@ -73,7 +72,7 @@ double i3ds::VzenseCamera::range_min_depth() {
 }
 
 
-double i3ds::VzenseCamera::range_max_depth() {
+double i3ds::VzenseCamera::range_max_depth() const {
   PsDepthRange depth_range;
   auto status = Ps2_GetDepthRange(device_handle_, session_index_, &depth_range);
   if (status != PsRetOK) {
