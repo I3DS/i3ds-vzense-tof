@@ -40,3 +40,5 @@ install(TARGETS ${TARGET} DESTINATION bin)
 
 add_executable(application_demo application_demo.cpp)
 target_link_libraries (application_demo ${VZENSE_LDFLAGS} ${LIBS})
+add_executable(pair_client_demo pair_client_demo.cpp)
+target_link_libraries (pair_client_demo ${VZENSE_LDFLAGS} ${LIBS})
