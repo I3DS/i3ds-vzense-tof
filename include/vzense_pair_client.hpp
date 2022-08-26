@@ -27,7 +27,7 @@ public:
     {}
 
     // Trigger aquisition from both cameras
-    void trigger()
+    inline void trigger()
     {
         left_trigger_.trigger();
         std::this_thread::sleep_for(std::chrono::milliseconds(us_trigger_interval_));

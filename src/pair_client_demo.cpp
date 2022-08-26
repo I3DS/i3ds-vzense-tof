@@ -12,6 +12,7 @@
 #include <i3ds/depthmap.hpp>
 #include <iostream>
 
+#include <ostream>
 #include <vzense_pair_client.hpp>
 
 
@@ -48,6 +49,7 @@ void handle_measurement(i3ds::DepthMap& dm)
     // the argument to image_data should always be 0.
     const unsigned char* image_data = dm.frame.image_data(0);
     size_t image_data_size = dm.frame.image_size(0);
+    std::cout << "Image data size: " << image_data_size << std::endl;
     std::cout << "First pixel value in image: " << static_cast<int>(image_data[0]) << std::endl;
     std::cout << "Last pixel value in image: " << static_cast<int>(image_data[image_data_size-1]) << std::endl;
 }
@@ -55,7 +57,14 @@ void handle_measurement(i3ds::DepthMap& dm)
 
 int main(int argc, char **argv)
 {
-    // NodeID of VZense ToF cameras
+    // NodeID of VZense ToF cameras have been set to match emulated ToF cameras in i3ds_suite_emulator
+    // Set up by running
+    //   $ i3ds_suite_emulator
+    // and
+    //   $ i3ds_suite_emulator --base 110
+    // as two different processes.
+    // Note that the data from both sensors can look the same if the RNG has the same seed. A solution then
+    // is to restart one of the emulator-suites after som messages has been sent to reinitialize the RNG.
     i3ds_asn1::NodeID left_camera_node_id = 15;
     i3ds_asn1::NodeID right_camera_node_id = 115;
 
@@ -84,6 +93,9 @@ int main(int argc, char **argv)
 
     running = true;
     while (running) {
+
+        std::cout << "Press Enter to trigger a message from each camera. Ctrl-C to exit.\n";
+        std::cin.get();
         // Wait a second
         sleep(1);
 
@@ -92,6 +104,7 @@ int main(int argc, char **argv)
 
         // Wait for new measurement
         while(!client.valid_measurements()) {
+            std::cout << "waiting for measurement\n";
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
 
