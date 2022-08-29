@@ -220,16 +220,33 @@ void i3ds::VzenseCamera::do_start() {
     throw i3ds::DeviceError("Failed to start stream.");
   }
 
-  // TODO(sigurdal): Implement WDR mode?
-  // PsWDROutputMode wdrMode = { PsWDRTotalRange_Two, PsNearRange, 1, PsFarRange, 1, PsUnknown, 1 };
-  auto dataMode = PsDepthAndIR_30;
+  PsDataMode dataMode = PsDepthAndIR_30;
+  status = Ps2_SetDataMode(device_handle_, session_index_, dataMode);
+
+  if (status != PsReturnStatus::PsRetOK)
+    BOOST_LOG_TRIVIAL(warning) << "Ps2_SetDataMode failed!:" << dataMode2str(dataMode);
+  else
+    BOOST_LOG_TRIVIAL(info) << "Set Ps2_SetDataMode: " << dataMode2str(dataMode);
+  
   status = Ps2_GetDataMode(device_handle_, session_index_, &dataMode);
 
   if (status != PsReturnStatus::PsRetOK)
-    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetDataMode failed!";
+    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetDataMode failed!" << returnStatus2string(status);
   else
     BOOST_LOG_TRIVIAL(info) << "Get Ps2_GetDataMode: " << dataMode2str(dataMode);
 
+  // Synchronize (in time) IR and Depth images within the camera
+  bool enableSynchronization = true;
+  status = Ps2_SetSynchronizeEnabled(device_handle_, session_index_, enableSynchronization);
+  
+  if (status != PsReturnStatus::PsRetOK)
+    BOOST_LOG_TRIVIAL(warning) << "Ps2_SetSynchronizeEnabled failed!" << returnStatus2string(status);
+  else
+    BOOST_LOG_TRIVIAL(info) << "Set Ps2_SetSynchronizeEnabled: " << std::boolalpha << enableSynchronization;
+
+
+  // TODO(sigurdal): Implement WDR mode?
+  // PsWDROutputMode wdrMode = { PsWDRTotalRange_Two, PsNearRange, 1, PsFarRange, 1, PsUnknown, 1 };
   if (dataMode == PsWDR_Depth) {
     // TODO(sigurdal): Implement WDR mode?
     BOOST_LOG_TRIVIAL(error) << "Wide Dynamic Range (WDR) not implemented yet. Aborting.";
@@ -270,14 +287,36 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
       return false;
   }
 
-  if (frameReady.depth == 1) {
-      PsFrame depthFrame = {0};
-      PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
+  /* Saving this for later: */
+  // if (frameReady.depth == 1) {
+  //     PsFrame depthFrame = {0};
+  //     PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
 
-      if (status == PsRetOK && depthFrame.pFrameData != NULL) {
-          send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
-      } else {
+  //     if (status == PsRetOK && depthFrame.pFrameData != NULL) {
+  //         send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
+  //     } else {
+  //         BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
+  //     }
+  // }
+
+/* Sending depth + IR */
+  if (frameReady.depth == 1 && frameReady.ir == 1) {
+      PsFrame depthFrame = {0};
+      PsFrame IRFrame = {0};
+      
+      status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
+      
+      if (status != PsRetOK || depthFrame.pFrameData == NULL) {
           BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
+          return true;
+      }
+
+      status = Ps2_GetFrame(device_handle_, session_index_, PsIRFrame, &IRFrame);
+
+      if (status == PsRetOK && IRFrame.pFrameData != NULL) {
+        send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), reinterpret_cast<uint16_t*>(IRFrame.pFrameData), depthFrame.width, depthFrame.height);
+      } else {
+        BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsIRFrame status:" << returnStatus2string(status);
       }
   }
 
@@ -299,25 +338,47 @@ void i3ds::VzenseCamera::do_stop() {
 }
 
 
-void i3ds::VzenseCamera::send_sample(const uint16_t* data, uint width, uint height) {
-  ToFCamera::MeasurementTopic::Data frame;
-  ToFCamera::MeasurementTopic::Codec::Initialize(frame);
+void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, const uint16_t* ir_data, uint width, uint height) {
+  ToFCamera::MeasurementTopic::Data depthMap;
+  ToFCamera::MeasurementTopic::Codec::Initialize(depthMap);
 
-  frame.descriptor.attributes.timestamp = get_timestamp();
-  frame.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
-  frame.descriptor.width = width;
-  frame.descriptor.height = height;
+  // Depth
+  depthMap.descriptor.attributes.timestamp = get_timestamp();
+  depthMap.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
+  depthMap.descriptor.width = width;
+  depthMap.descriptor.height = height;
 
   const uint size = width * height;
-  frame.depths.resize(size);
+
+  depthMap.depths.resize(size);
+
   for (size_t i = 0; i < size; i++) {
-    if (data[i] == 0xffff) {
-      frame.depths[i] = -1;
+    if (depth_data[i] == 0xffff) {
+      depthMap.depths[i] = -1;
       continue;
     }
-    frame.depths[i] = static_cast<float>(data[i]) / 1000.0f; // Scale from [mm] to [m]
+    depthMap.depths[i] = static_cast<float>(depth_data[i]) / 1000.0f; // Scale from [mm] to [m]
   }
 
-  publisher_.Send<ToFCamera::MeasurementTopic>(frame);
+  // IR Frame
+  depthMap.frame.descriptor.image_count = 1;
+  depthMap.frame.descriptor.frame_mode  = i3ds_asn1::Frame_mode_t_mode_mono;
+  depthMap.frame.descriptor.data_depth  = 16; // TODO(eric) Check (bits per pixel)
+  depthMap.frame.descriptor.pixel_size  = 2; // TODO(eric) Check (bytes per pixel, rounded up)
+  depthMap.frame.descriptor.region.size_x = width; // TODO(eric): Check if the IR frame height and width is the same as depth
+  depthMap.frame.descriptor.region.size_y = height; // TODO(eric): Check if the IR frame height and width is the same as depth
+
+  size_t image_data_size = width * height * depthMap.frame.descriptor.pixel_size; // TODO: Set this once, somewhere
+  // TODO(eric): Check if width and height is same as in depth..
+  i3ds_asn1::byte *image_data = static_cast<i3ds_asn1::byte *>(malloc(image_data_size));
+
+  for (size_t i = 0; i < image_data_size; i++) {
+    image_data[i] = ir_data[i]; // TODO(eric): Kan jeg bare caste ir_data til den rette typen istedenfor?
+  }
+
+  depthMap.frame.append_image(image_data, image_data_size);
+  depthMap.has_frame = true;
+
+  publisher_.Send<ToFCamera::MeasurementTopic>(depthMap);
   update_and_check_batch_count();
 }
