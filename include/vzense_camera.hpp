@@ -60,7 +60,7 @@ class VzenseCamera : public ToFCamera {
   
   private:
   bool sample_loop(i3ds_asn1::Timepoint timestamp);
-  void send_sample(const uint16_t *depth_data, const uint16_t *ir_data, uint width, uint height);
+  void send_sample(const uint16_t *depth_data, uint16_t *ir_data, uint width, uint height);
 
   Sampler sampler_;
   

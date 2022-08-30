@@ -358,7 +358,7 @@ void i3ds::VzenseCamera::do_stop() {
 }
 
 
-void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, const uint16_t* ir_data, uint width, uint height) {
+void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, uint16_t* ir_data, uint width, uint height) {
   ToFCamera::MeasurementTopic::Data depthMap;
   ToFCamera::MeasurementTopic::Codec::Initialize(depthMap);
 
@@ -389,16 +389,12 @@ void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, const uint16_t*
   depthMap.frame.descriptor.region.size_y = height; // TODO(eric): Check if the IR frame height and width is the same as depth
 
   size_t image_data_size = width * height * depthMap.frame.descriptor.pixel_size; // TODO: Set this once, somewhere
-  // TODO(eric): Check if width and height is same as in depth..
-  i3ds_asn1::byte *image_data = static_cast<i3ds_asn1::byte *>(malloc(image_data_size));
 
   for (size_t i = 0; i < image_data_size/2; i++) {
-    int j = i*2;
-    image_data[j+1] = ir_data[i]; // TODO(eric): Kan jeg bare caste ir_data til den rette typen istedenfor?
-    image_data[j] = ir_data[i] >> 8;
+    ir_data[i] *= 17; // Scaling factor. The highest IR pixel value is 3840.
   }
 
-  depthMap.frame.append_image(image_data, image_data_size);
+  depthMap.frame.append_image(reinterpret_cast<i3ds_asn1::byte*>(ir_data), image_data_size);
   depthMap.has_frame = true;
 
   publisher_.Send<ToFCamera::MeasurementTopic>(depthMap);
