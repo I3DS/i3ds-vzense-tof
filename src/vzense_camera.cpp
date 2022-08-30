@@ -10,6 +10,7 @@
 
 #include "vzense_camera.hpp"
 #include "DCAM710/Vzense_types_710.h"
+#include <cstdint>
 
 #ifndef BOOST_LOG_DYN_LINK
 #define BOOST_LOG_DYN_LINK
@@ -334,7 +335,7 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
       BOOST_LOG_TRIVIAL(info) << "IR-frame info:";
       print_PsFrame_info(IRFrame);
       if (status == PsRetOK && IRFrame.pFrameData != NULL) {
-        send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), reinterpret_cast<uint16_t*>(IRFrame.pFrameData), depthFrame.width, depthFrame.height);
+        send_sample(depthFrame, IRFrame);
       } else {
         BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsIRFrame status:" << returnStatus2string(status);
       }
@@ -358,19 +359,23 @@ void i3ds::VzenseCamera::do_stop() {
 }
 
 
-void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, uint16_t* ir_data, uint width, uint height) {
+//void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, uint16_t* ir_data, uint width, uint height) {
+  
+void i3ds::VzenseCamera::send_sample(const PsFrame& depth_frame, const PsFrame& ir_frame) {
   ToFCamera::MeasurementTopic::Data depthMap;
   ToFCamera::MeasurementTopic::Codec::Initialize(depthMap);
 
   // Depth
   depthMap.descriptor.attributes.timestamp = get_timestamp();
   depthMap.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
-  depthMap.descriptor.width = width;
-  depthMap.descriptor.height = height;
+  depthMap.descriptor.width = depth_frame.width;
+  depthMap.descriptor.height = depth_frame.height;
 
-  const uint size = width * height;
+  const uint size = depth_frame.width * depth_frame.height;
 
   depthMap.depths.resize(size);
+
+  uint16_t* depth_data = reinterpret_cast<uint16_t*>(depth_frame.pFrameData);
 
   for (size_t i = 0; i < size; i++) {
     if (depth_data[i] == 0xffff) {
@@ -383,18 +388,21 @@ void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, uint16_t* ir_da
   // IR Frame
   depthMap.frame.descriptor.image_count = 1;
   depthMap.frame.descriptor.frame_mode  = i3ds_asn1::Frame_mode_t_mode_mono;
-  depthMap.frame.descriptor.data_depth  = 16; // TODO(eric) Check (bits per pixel)
-  depthMap.frame.descriptor.pixel_size  = 2; // TODO(eric) Check (bytes per pixel, rounded up)
-  depthMap.frame.descriptor.region.size_x = width; // TODO(eric): Check if the IR frame height and width is the same as depth
-  depthMap.frame.descriptor.region.size_y = height; // TODO(eric): Check if the IR frame height and width is the same as depth
+  depthMap.frame.descriptor.data_depth  = 16;
+  depthMap.frame.descriptor.pixel_size  = 2;
+  depthMap.frame.descriptor.region.size_x = ir_frame.width;
+  depthMap.frame.descriptor.region.size_y = ir_frame.height;
 
-  size_t image_data_size = width * height * depthMap.frame.descriptor.pixel_size; // TODO: Set this once, somewhere
+  size_t image_data_size = ir_frame.dataLen;
 
-  for (size_t i = 0; i < image_data_size/2; i++) {
+  uint16_t* ir_data = reinterpret_cast<uint16_t*>(ir_frame.pFrameData);
+
+  for (size_t i = 0; i < image_data_size/2; i++) { // Length is halved since we use uint16_t pointer
     ir_data[i] *= 17; // Scaling factor. The highest IR pixel value is 3840.
   }
 
-  depthMap.frame.append_image(reinterpret_cast<i3ds_asn1::byte*>(ir_data), image_data_size);
+  //depthMap.frame.append_image(reinterpret_cast<i3ds_asn1::byte*>(ir_data), image_data_size);
+  depthMap.frame.append_image(ir_frame.pFrameData, image_data_size);
   depthMap.has_frame = true;
 
   publisher_.Send<ToFCamera::MeasurementTopic>(depthMap);

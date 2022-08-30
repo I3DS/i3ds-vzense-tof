@@ -36,7 +36,6 @@
 #include "vzense_helpers.hpp"
 
 namespace po = boost::program_options;
-namespace logging = boost::log;
 
 volatile bool running;
 

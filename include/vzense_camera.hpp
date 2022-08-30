@@ -13,6 +13,7 @@
 
 #include <thread>
 
+#include "DCAM710/Vzense_types_710.h"
 #include "Vzense_api2.h"
 
 #include <i3ds/publisher.hpp>
@@ -60,7 +61,7 @@ class VzenseCamera : public ToFCamera {
   
   private:
   bool sample_loop(i3ds_asn1::Timepoint timestamp);
-  void send_sample(const uint16_t *depth_data, uint16_t *ir_data, uint width, uint height);
+  void send_sample(const PsFrame& depth_data, const PsFrame& ir_data);
 
   Sampler sampler_;
   
