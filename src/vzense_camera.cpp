@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "vzense_camera.hpp"
+#include "DCAM710/Vzense_types_710.h"
 
 #ifndef BOOST_LOG_DYN_LINK
 #define BOOST_LOG_DYN_LINK
@@ -275,6 +276,21 @@ void i3ds::VzenseCamera::do_start() {
   BOOST_LOG_TRIVIAL(info) << "Started Vzense";
 }
 
+void print_PsFrame_info(const PsFrame& frame)
+{
+  BOOST_LOG_TRIVIAL(info) << "frameIndex: " << frame.frameIndex;
+  BOOST_LOG_TRIVIAL(info) << "frameType: " << frame.frameType;
+  BOOST_LOG_TRIVIAL(info) << "pixelFormat: " << frame.pixelFormat;
+  BOOST_LOG_TRIVIAL(info) << "dataLen: " << frame.dataLen;
+  BOOST_LOG_TRIVIAL(info) << "exposureTime: " << frame.exposureTime;
+  BOOST_LOG_TRIVIAL(info) << "width: " << frame.width;
+  BOOST_LOG_TRIVIAL(info) << "height: " << frame.height;
+  BOOST_LOG_TRIVIAL(info) << "timestamp:";
+  BOOST_LOG_TRIVIAL(info) << "  hour: " << frame.timestamp.tm_hour;
+  BOOST_LOG_TRIVIAL(info) << "  minute: " << frame.timestamp.tm_min;
+  BOOST_LOG_TRIVIAL(info) << "  sec: " << frame.timestamp.tm_sec;
+  BOOST_LOG_TRIVIAL(info) << "  msec: " << frame.timestamp.tm_msec;
+}
 
 bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
 
@@ -306,13 +322,17 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
       
       status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
       
+      BOOST_LOG_TRIVIAL(info) << "Depth frame info:";
+      print_PsFrame_info(depthFrame);
+
       if (status != PsRetOK || depthFrame.pFrameData == NULL) {
           BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
           return true;
       }
 
       status = Ps2_GetFrame(device_handle_, session_index_, PsIRFrame, &IRFrame);
-
+      BOOST_LOG_TRIVIAL(info) << "IR-frame info:";
+      print_PsFrame_info(IRFrame);
       if (status == PsRetOK && IRFrame.pFrameData != NULL) {
         send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), reinterpret_cast<uint16_t*>(IRFrame.pFrameData), depthFrame.width, depthFrame.height);
       } else {
@@ -372,8 +392,10 @@ void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, const uint16_t*
   // TODO(eric): Check if width and height is same as in depth..
   i3ds_asn1::byte *image_data = static_cast<i3ds_asn1::byte *>(malloc(image_data_size));
 
-  for (size_t i = 0; i < image_data_size; i++) {
-    image_data[i] = ir_data[i]; // TODO(eric): Kan jeg bare caste ir_data til den rette typen istedenfor?
+  for (size_t i = 0; i < image_data_size/2; i++) {
+    int j = i*2;
+    image_data[j+1] = ir_data[i]; // TODO(eric): Kan jeg bare caste ir_data til den rette typen istedenfor?
+    image_data[j] = ir_data[i] >> 8;
   }
 
   depthMap.frame.append_image(image_data, image_data_size);
