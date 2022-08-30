@@ -12,6 +12,7 @@
 #define __VZENSE_WRAPPER_HPP
 
 #include <boost/log/trivial.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "Vzense_api2.h"
 #include "vzense_enum2str.hpp"
@@ -49,7 +50,7 @@ inline void print_camera_parameters(PsDeviceHandle deviceHandle, uint32_t sessio
 }
 
 inline void log_device_info(PsDeviceInfo pDeviceListInfo[], int deviceCount) {
-  for (BOOST_TYPEOF(deviceCount) i = 0; i < deviceCount; i++) {
+  for (int i = 0; i < deviceCount; i++) {
     BOOST_LOG_TRIVIAL(debug) << "Camera " << i << ":";
     BOOST_LOG_TRIVIAL(debug) << "  Device type:" << pDeviceListInfo[i].devicetype;
     BOOST_LOG_TRIVIAL(debug) << "  URI:        " << pDeviceListInfo[i].uri;
@@ -74,7 +75,7 @@ inline const char* find_device_uri(std::string camera_name, PsDeviceInfo pDevice
     if (camera_name == "") {
       BOOST_LOG_TRIVIAL(info) << "Camera name not set, opening first available device.";
     }
-    for (BOOST_TYPEOF(deviceCount) i = 0; i < deviceCount; i++) {
+    for (int i = 0; i < deviceCount; i++) {
       if (pDeviceListInfo[i].status == Connected) {
         return pDeviceListInfo[i].uri;
       }
@@ -93,7 +94,7 @@ inline const char* find_device_uri(std::string camera_name, PsDeviceInfo pDevice
   }
 
   // Finally, look for camera based on serial
-  for (BOOST_TYPEOF(deviceCount) i = 0; i < deviceCount; i++) {
+  for (int i = 0; i < deviceCount; i++) {
     if (camera_name == pDeviceListInfo[i].alias) {
       return pDeviceListInfo[i].uri;
     }
