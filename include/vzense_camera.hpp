@@ -27,6 +27,9 @@ class VzenseCamera : public ToFCamera {
   struct Parameters {
     // Unique identifier of camera parameter.
     std::string camera_name;
+
+    // Output IR image along with depthmap
+    bool ir_output;
   };
 
   // Constructor and destructor.
@@ -60,6 +63,9 @@ class VzenseCamera : public ToFCamera {
   virtual void handle_range(ToFCamera::RangeService::Data& command);
   
   private:
+
+  void add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame, i3ds_asn1::Timepoint timestamp);
+  void add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame, i3ds_asn1::Timepoint timestamp);
   bool sample_loop(i3ds_asn1::Timepoint timestamp);
   void send_sample(const PsFrame& depth_data, const PsFrame& ir_data);
 

@@ -11,6 +11,9 @@
 #include "vzense_camera.hpp"
 #include "DCAM710/Vzense_types_710.h"
 #include <cstdint>
+#include <i3ds/depthmap.hpp>
+#include <i3ds_asn1/Common.hpp>
+#include <i3ds_asn1/SampleAttribute.hpp>
 
 #ifndef BOOST_LOG_DYN_LINK
 #define BOOST_LOG_DYN_LINK
@@ -304,22 +307,11 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
       return false;
   }
 
-  /* Saving this for later: */
-  // if (frameReady.depth == 1) {
-  //     PsFrame depthFrame = {0};
-  //     PsReturnStatus status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
-
-  //     if (status == PsRetOK && depthFrame.pFrameData != NULL) {
-  //         send_sample(reinterpret_cast<uint16_t*>(depthFrame.pFrameData), depthFrame.width, depthFrame.height);
-  //     } else {
-  //         BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
-  //     }
-  // }
-
 /* Sending depth + IR */
-  if (frameReady.depth == 1 && frameReady.ir == 1) {
-      PsFrame depthFrame = {0};
-      PsFrame IRFrame = {0};
+  PsFrame depthFrame = {0};
+  PsFrame IRFrame = {0};
+
+  if (frameReady.depth == 1 ) {
       
       status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
       
@@ -330,17 +322,20 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
           BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
           return true;
       }
+  }
+  
+  if (param_.ir_output && frameReady.ir == 1) {
 
       status = Ps2_GetFrame(device_handle_, session_index_, PsIRFrame, &IRFrame);
       BOOST_LOG_TRIVIAL(info) << "IR-frame info:";
       print_PsFrame_info(IRFrame);
-      if (status == PsRetOK && IRFrame.pFrameData != NULL) {
-        send_sample(depthFrame, IRFrame);
-      } else {
+      if (status != PsRetOK || IRFrame.pFrameData == NULL) {
         BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsIRFrame status:" << returnStatus2string(status);
+        return true;
       }
-  }
-
+  }        
+  send_sample(depthFrame, IRFrame);
+  
   return true;
 }
 
@@ -358,15 +353,9 @@ void i3ds::VzenseCamera::do_stop() {
   BOOST_LOG_TRIVIAL(info) << "Stopped Vzense";
 }
 
-
-//void i3ds::VzenseCamera::send_sample(const uint16_t* depth_data, uint16_t* ir_data, uint width, uint height) {
-  
-void i3ds::VzenseCamera::send_sample(const PsFrame& depth_frame, const PsFrame& ir_frame) {
-  ToFCamera::MeasurementTopic::Data depthMap;
-  ToFCamera::MeasurementTopic::Codec::Initialize(depthMap);
-
-  // Depth
-  depthMap.descriptor.attributes.timestamp = get_timestamp();
+void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame, i3ds_asn1::Timepoint timestamp)
+{
+  depthMap.descriptor.attributes.timestamp = timestamp;
   depthMap.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
   depthMap.descriptor.width = depth_frame.width;
   depthMap.descriptor.height = depth_frame.height;
@@ -384,8 +373,12 @@ void i3ds::VzenseCamera::send_sample(const PsFrame& depth_frame, const PsFrame& 
     }
     depthMap.depths[i] = static_cast<float>(depth_data[i]) / 1000.0f; // Scale from [mm] to [m]
   }
+}
 
-  // IR Frame
+void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame, i3ds_asn1::Timepoint timestamp)
+{
+  depthMap.frame.descriptor.attributes.timestamp = timestamp;
+  depthMap.frame.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
   depthMap.frame.descriptor.image_count = 1;
   depthMap.frame.descriptor.frame_mode  = i3ds_asn1::Frame_mode_t_mode_mono;
   depthMap.frame.descriptor.data_depth  = 16;
@@ -401,9 +394,19 @@ void i3ds::VzenseCamera::send_sample(const PsFrame& depth_frame, const PsFrame& 
     ir_data[i] *= 17; // Scaling factor. The highest IR pixel value is 3840.
   }
 
-  //depthMap.frame.append_image(reinterpret_cast<i3ds_asn1::byte*>(ir_data), image_data_size);
   depthMap.frame.append_image(ir_frame.pFrameData, image_data_size);
   depthMap.has_frame = true;
+}
+  
+void i3ds::VzenseCamera::send_sample(const PsFrame& depth_frame, const PsFrame& ir_frame) {
+  ToFCamera::MeasurementTopic::Data depthMap;
+  ToFCamera::MeasurementTopic::Codec::Initialize(depthMap);
+  i3ds_asn1::Timepoint timestamp = get_timestamp();
+
+  add_depths_to_depthmap(depthMap, depth_frame, timestamp);
+  if (param_.ir_output) {
+    add_ir_frame_to_depthmap(depthMap, ir_frame, timestamp);
+  }
 
   publisher_.Send<ToFCamera::MeasurementTopic>(depthMap);
   update_and_check_batch_count();

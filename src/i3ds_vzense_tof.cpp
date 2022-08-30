@@ -8,6 +8,7 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <boost/program_options/value_semantic.hpp>
 #include <unistd.h>
 
 #include <csignal>
@@ -59,6 +60,7 @@ void validate(boost::any& v, std::vector<std::string> const& xs, counter*, long)
 
 int main(int argc, char** argv) {
   unsigned int node_id;
+  bool no_ir = false;
 
   i3ds::VzenseCamera::Parameters param;
   i3ds::Configurator configurator;
@@ -69,6 +71,7 @@ int main(int argc, char** argv) {
   desc.add_options()
   ("node,n", po::value<unsigned int>(&node_id)->default_value(10), "Node ID of camera")
   ("camera-name,c", po::value<std::string>(&param.camera_name), "Connect via (UserDefinedName) of Camera")
+  ("no-ir", po::bool_switch(&no_ir), "Disable IR output")
   ("print,p", "Print the camera configuration")
   ;
 
@@ -78,6 +81,8 @@ int main(int argc, char** argv) {
     print_available_cameras();
     return 0;
   }
+
+  param.ir_output = !no_ir;
 
   BOOST_LOG_TRIVIAL(info) << "Node ID:     " << node_id;
   BOOST_LOG_TRIVIAL(info) << "ToF name: " << param.camera_name;
