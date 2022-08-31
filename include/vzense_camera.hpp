@@ -64,8 +64,9 @@ class VzenseCamera : public ToFCamera {
   
   private:
 
-  void add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame, i3ds_asn1::Timepoint timestamp);
-  void add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame, i3ds_asn1::Timepoint timestamp);
+  i3ds_asn1::Timepoint convert_to_UNIX(const PsTimeStamp& camera_timestamp);
+  void add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame);
+  void add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame);
   bool sample_loop(i3ds_asn1::Timepoint timestamp);
   void send_sample(const PsFrame& depth_data, const PsFrame& ir_data);
 

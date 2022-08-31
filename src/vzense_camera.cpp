@@ -30,6 +30,7 @@
 #include <boost/log/trivial.hpp>
 
 #include <i3ds/time.hpp>
+#include <ctime>
 
 #include "vzense_enum2str.hpp"
 #include "vzense_helpers.hpp"
@@ -353,8 +354,33 @@ void i3ds::VzenseCamera::do_stop() {
   BOOST_LOG_TRIVIAL(info) << "Stopped Vzense";
 }
 
-void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame, i3ds_asn1::Timepoint timestamp)
+i3ds_asn1::Timepoint i3ds::VzenseCamera::convert_to_UNIX(const PsTimeStamp& camera_timestamp) { // TODO
+
+  // Get current time within i3ds and create a tm struct
+  std::time_t t = std::time(nullptr);
+  struct tm* i3ds_timestamp;
+  i3ds_timestamp = localtime(&t);
+
+  // Replace with camera timestamp values
+  i3ds_timestamp->tm_sec = camera_timestamp.tm_sec;
+  i3ds_timestamp->tm_min = camera_timestamp.tm_min;
+  i3ds_timestamp->tm_hour = camera_timestamp.tm_hour;
+
+  // Fix the timestamp in case the camera's timestamp is at 23h 59m 59s 999ms, and
+  // the i3ds timestamp is at 00h 00m 00s 005ms (for example)
+  if (camera_timestamp.tm_hour > i3ds_timestamp->tm_hour) {
+    i3ds_timestamp->tm_mday -= 1;
+  }
+
+  // Convert to UNIX and add milliseconds
+  i3ds_asn1::Timepoint unix_timestamp = mktime(i3ds_timestamp)*1000 + camera_timestamp.tm_msec;
+  return unix_timestamp;
+}
+
+void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame)
 {
+  i3ds_asn1::Timepoint timestamp = convert_to_UNIX(depth_frame.timestamp);
+
   depthMap.descriptor.attributes.timestamp = timestamp;
   depthMap.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
   depthMap.descriptor.width = depth_frame.width;
@@ -375,9 +401,11 @@ void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const 
   }
 }
 
-void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame, i3ds_asn1::Timepoint timestamp)
+void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame) // OK
 {
-  depthMap.frame.descriptor.attributes.timestamp = timestamp;
+  i3ds_asn1::Timepoint timestamp = convert_to_UNIX(ir_frame.timestamp);
+
+  depthMap.frame.descriptor.attributes.timestamp = timestamp; 
   depthMap.frame.descriptor.attributes.validity = i3ds_asn1::SampleValidity_sample_valid;
   depthMap.frame.descriptor.image_count = 1;
   depthMap.frame.descriptor.frame_mode  = i3ds_asn1::Frame_mode_t_mode_mono;
@@ -401,11 +429,10 @@ void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, cons
 void i3ds::VzenseCamera::send_sample(const PsFrame& depth_frame, const PsFrame& ir_frame) {
   ToFCamera::MeasurementTopic::Data depthMap;
   ToFCamera::MeasurementTopic::Codec::Initialize(depthMap);
-  i3ds_asn1::Timepoint timestamp = get_timestamp();
 
-  add_depths_to_depthmap(depthMap, depth_frame, timestamp);
+  add_depths_to_depthmap(depthMap, depth_frame);
   if (param_.ir_output) {
-    add_ir_frame_to_depthmap(depthMap, ir_frame, timestamp);
+    add_ir_frame_to_depthmap(depthMap, ir_frame);
   }
 
   publisher_.Send<ToFCamera::MeasurementTopic>(depthMap);
