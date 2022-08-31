@@ -354,7 +354,7 @@ void i3ds::VzenseCamera::do_stop() {
   BOOST_LOG_TRIVIAL(info) << "Stopped Vzense";
 }
 
-i3ds_asn1::Timepoint i3ds::VzenseCamera::convert_to_UNIX(const PsTimeStamp& camera_timestamp) { // TODO
+i3ds_asn1::Timepoint i3ds::VzenseCamera::convert_to_UNIX(const PsTimeStamp& camera_timestamp) {
 
   // Get current time within i3ds and create a tm struct
   std::time_t t = std::time(nullptr);
@@ -374,7 +374,8 @@ i3ds_asn1::Timepoint i3ds::VzenseCamera::convert_to_UNIX(const PsTimeStamp& came
 
   // Convert to UNIX and add milliseconds
   i3ds_asn1::Timepoint unix_timestamp = mktime(i3ds_timestamp)*1000 + camera_timestamp.tm_msec;
-  return unix_timestamp;
+  // Convert to microseconds before returning, to make it correspond with other timestamps from i3ds
+  return unix_timestamp*1000;
 }
 
 void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& depth_frame)
@@ -401,7 +402,7 @@ void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const 
   }
 }
 
-void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame) // OK
+void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, const PsFrame& ir_frame)
 {
   i3ds_asn1::Timepoint timestamp = convert_to_UNIX(ir_frame.timestamp);
 
