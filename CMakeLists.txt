@@ -120,3 +120,4 @@ endif ()
 ################################################################################
 
 add_subdirectory (src)
+install(FILES include/vzense_pair_client.hpp DESTINATION include)
