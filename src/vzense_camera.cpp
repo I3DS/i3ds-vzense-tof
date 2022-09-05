@@ -323,19 +323,21 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
           BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsDepthFrame status:" << returnStatus2string(status);
           return true;
       }
-  }
   
-  if (param_.ir_output && frameReady.ir == 1) {
+      if (param_.ir_output && frameReady.ir == 1) {
 
-      status = Ps2_GetFrame(device_handle_, session_index_, PsIRFrame, &IRFrame);
-      BOOST_LOG_TRIVIAL(info) << "IR-frame info:";
-      print_PsFrame_info(IRFrame);
-      if (status != PsRetOK || IRFrame.pFrameData == NULL) {
-        BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsIRFrame status:" << returnStatus2string(status);
-        return true;
+          status = Ps2_GetFrame(device_handle_, session_index_, PsIRFrame, &IRFrame);
+          BOOST_LOG_TRIVIAL(info) << "IR-frame info:";
+          print_PsFrame_info(IRFrame);
+          if (status != PsRetOK || IRFrame.pFrameData == NULL) {
+            BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsIRFrame status:" << returnStatus2string(status);
+            return true;
+          }
       }
-  }        
-  send_sample(depthFrame, IRFrame);
+
+      send_sample(depthFrame, IRFrame);
+  
+  }
   
   return true;
 }
