@@ -16,7 +16,10 @@ make
 
 To list available cameras, run the program with the -p argument: `i3ds_vzense_tof -p`. This will print the number of available cameras and the information about them. The serial number is what is used as CAMERA-NAME for the -c argument below. The last few characters of this serial number will also be printed on the label on the device.
 
-Start the node using `src/i3ds_vzense_tof`. A specific camera can be connected to by suppling the `-c CAMERA-NAME` parameter.
+Start the node using `src/i3ds_vzense_tof`.
+A specific camera can be connected to by suppling the `-c CAMERA-NAME` parameter.
+By default, the camera will output both depthmaps and IR images, if the IR-images are not needed, they can be disabled with the `--no-ir` flag.
+To show information about connected cameras, like serial number, run with the `--print` flag.
 
 To visualize the TOF output, in a new terminal, run: `i3ds_camera_capture --tof 1`
 

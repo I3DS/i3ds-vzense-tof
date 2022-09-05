@@ -283,18 +283,18 @@ void i3ds::VzenseCamera::do_start() {
 
 void print_PsFrame_info(const PsFrame& frame)
 {
-  BOOST_LOG_TRIVIAL(info) << "frameIndex: " << frame.frameIndex;
-  BOOST_LOG_TRIVIAL(info) << "frameType: " << frame.frameType;
-  BOOST_LOG_TRIVIAL(info) << "pixelFormat: " << frame.pixelFormat;
-  BOOST_LOG_TRIVIAL(info) << "dataLen: " << frame.dataLen;
-  BOOST_LOG_TRIVIAL(info) << "exposureTime: " << frame.exposureTime;
-  BOOST_LOG_TRIVIAL(info) << "width: " << frame.width;
-  BOOST_LOG_TRIVIAL(info) << "height: " << frame.height;
-  BOOST_LOG_TRIVIAL(info) << "timestamp:";
-  BOOST_LOG_TRIVIAL(info) << "  hour: " << frame.timestamp.tm_hour;
-  BOOST_LOG_TRIVIAL(info) << "  minute: " << frame.timestamp.tm_min;
-  BOOST_LOG_TRIVIAL(info) << "  sec: " << frame.timestamp.tm_sec;
-  BOOST_LOG_TRIVIAL(info) << "  msec: " << frame.timestamp.tm_msec;
+  BOOST_LOG_TRIVIAL(trace) << "  frameIndex: " << frame.frameIndex;
+  BOOST_LOG_TRIVIAL(trace) << "  frameType: " << frame.frameType;
+  BOOST_LOG_TRIVIAL(trace) << "  pixelFormat: " << frame.pixelFormat;
+  BOOST_LOG_TRIVIAL(trace) << "  dataLen: " << frame.dataLen;
+  BOOST_LOG_TRIVIAL(trace) << "  exposureTime: " << frame.exposureTime;
+  BOOST_LOG_TRIVIAL(trace) << "  width: " << frame.width;
+  BOOST_LOG_TRIVIAL(trace) << "  height: " << frame.height;
+  BOOST_LOG_TRIVIAL(trace) << "  timestamp:";
+  BOOST_LOG_TRIVIAL(trace) << "    hour: " << frame.timestamp.tm_hour;
+  BOOST_LOG_TRIVIAL(trace) << "    minute: " << frame.timestamp.tm_min;
+  BOOST_LOG_TRIVIAL(trace) << "    sec: " << frame.timestamp.tm_sec;
+  BOOST_LOG_TRIVIAL(trace) << "    msec: " << frame.timestamp.tm_msec;
 }
 
 bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
@@ -316,7 +316,7 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
       
       status = Ps2_GetFrame(device_handle_, session_index_, PsDepthFrame, &depthFrame);
       
-      BOOST_LOG_TRIVIAL(info) << "Depth frame info:";
+      BOOST_LOG_TRIVIAL(trace) << "Depth frame info:";
       print_PsFrame_info(depthFrame);
 
       if (status != PsRetOK || depthFrame.pFrameData == NULL) {
@@ -327,7 +327,7 @@ bool i3ds::VzenseCamera::sample_loop(i3ds_asn1::Timepoint timestamp) {
       if (param_.ir_output && frameReady.ir == 1) {
 
           status = Ps2_GetFrame(device_handle_, session_index_, PsIRFrame, &IRFrame);
-          BOOST_LOG_TRIVIAL(info) << "IR-frame info:";
+          BOOST_LOG_TRIVIAL(trace) << "IR-frame info:";
           print_PsFrame_info(IRFrame);
           if (status != PsRetOK || IRFrame.pFrameData == NULL) {
             BOOST_LOG_TRIVIAL(warning) << "Ps2_GetFrame PsIRFrame status:" << returnStatus2string(status);
