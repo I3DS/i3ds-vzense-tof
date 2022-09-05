@@ -21,7 +21,7 @@ A specific camera can be connected to by suppling the `-c CAMERA-NAME` parameter
 By default, the camera will output both depthmaps and IR images, if the IR-images are not needed, they can be disabled with the `--no-ir` flag.
 To show information about connected cameras, like serial number, run with the `--print` flag.
 
-To visualize the TOF output, in a new terminal, run: `i3ds_camera_capture --tof 1`
+To visualize the TOF output, in a new terminal, run: `i3ds_camera_capture --tof`
 
 Then activate the TOF using: `i3ds_configure_tof --activate`
 
