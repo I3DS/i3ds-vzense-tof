@@ -75,7 +75,7 @@ class VzenseCamera : public ToFCamera {
   uint32_t session_index_;
   PsDeviceHandle device_handle_ = nullptr;
 
-  PsDepthRange wanted_range_ = PsNearRange;
+  PsDepthRange wanted_range_ = PsFarRange;
 
   Publisher publisher_;
 };
