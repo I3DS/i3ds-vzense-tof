@@ -37,6 +37,12 @@ add_executable(${TARGET} i3ds_vzense_tof.cpp ${SRCS})
 target_compile_options(${TARGET} PRIVATE ${VZENSE_CXXFLAGS} -Wno-unknown-pragmas)
 target_link_libraries (${TARGET} ${VZENSE_LDFLAGS} ${LIBS})
 install(TARGETS ${TARGET} DESTINATION bin)
+set(LIB_FILES_FOR_COPYING 
+    "../thirdparty/Vzense_SDK_Linux/Ubuntu18.04/Lib/libImgPreProcess.so"
+    "../thirdparty/Vzense_SDK_Linux/Ubuntu18.04/Lib/libvzense_api.so"
+    "../thirdparty/Vzense_SDK_Linux/Ubuntu18.04/Lib/libvzense_api.so.3.4"
+    "../thirdparty/Vzense_SDK_Linux/Ubuntu18.04/Lib/libvzense_api.so.3.4.8")
+install(FILES ${LIB_FILES_FOR_COPYING} DESTINATION lib)
 
 add_executable(application_demo application_demo.cpp)
 target_link_libraries (application_demo ${VZENSE_LDFLAGS} ${LIBS})
