@@ -28,8 +28,8 @@ Then activate the TOF using: `i3ds_configure_tof --activate`
 Set the wanted range using `i3ds_configure_tof -D NUM` where NUM is 1 (near), 2 (middle), 3 (far).
 The NUM argument gives the max range in meters. The vzense camera supports three ranges:
 * Near: 0.35-1.5 m
-* Mid: 0.8-4.4 m
-* Far: 1.2-6.2 m
+* Mid: 0.5-2.8 m
+* Far: 0.8-4.4 m
  
 Start the TOF using `i3ds_configure_tof --start`
 
