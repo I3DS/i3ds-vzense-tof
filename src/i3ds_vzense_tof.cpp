@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
   ("node,n", po::value<unsigned int>(&node_id)->default_value(10), "Node ID of camera")
   ("camera-name,c", po::value<std::string>(&param.camera_name), "Connect via (UserDefinedName) of Camera")
   ("no-ir", po::bool_switch(&no_ir), "Disable IR output")
+  ("flip,f", po::bool_switch(&param.flip_image), "Flip measurement output")
   ("print,p", "Print the camera configuration")
   ;
 

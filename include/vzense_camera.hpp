@@ -11,6 +11,7 @@
 #ifndef __VZENSE_CAMERA_HPP
 #define __VZENSE_CAMERA_HPP
 
+#include <memory>
 #include <thread>
 
 #include "DCAM710/Vzense_types_710.h"
@@ -30,6 +31,9 @@ class VzenseCamera : public ToFCamera {
 
     // Output IR image along with depthmap
     bool ir_output;
+
+    // Flip image 180 degrees
+    bool flip_image;
   };
 
   // Constructor and destructor.
@@ -78,6 +82,9 @@ class VzenseCamera : public ToFCamera {
   PsDepthRange wanted_range_ = PsFarRange;
 
   Publisher publisher_;
+
+  // Memory space to copy flipped image if needed
+  std::unique_ptr<uint16_t> flipped_image_;
 };
 
 }  // namespace i3ds

@@ -14,6 +14,7 @@
 #include <i3ds/depthmap.hpp>
 #include <i3ds_asn1/Common.hpp>
 #include <i3ds_asn1/SampleAttribute.hpp>
+#include <memory>
 
 #ifndef BOOST_LOG_DYN_LINK
 #define BOOST_LOG_DYN_LINK
@@ -40,7 +41,8 @@ i3ds::VzenseCamera::VzenseCamera(Context::Ptr context, i3ds_asn1::NodeID node, c
     i3ds::ToFCamera(node),
     param_(param),
     sampler_([this](unsigned int ts){return sample_loop(ts);}),
-    publisher_(context, node) 
+    publisher_(context, node),
+    flipped_image_(nullptr)
 {
   set_device_name(param.camera_name);
 }
@@ -400,7 +402,8 @@ void i3ds::VzenseCamera::add_depths_to_depthmap(i3ds::DepthMap& depthMap, const 
       depthMap.depths[i] = -1;
       continue;
     }
-    depthMap.depths[i] = static_cast<float>(depth_data[i]) / 1000.0f; // Scale from [mm] to [m]
+    int index = param_.flip_image ? size-1-i : i; // Add values backwards if param_.flip_image is true
+    depthMap.depths[index] = static_cast<float>(depth_data[i]) / 1000.0f; // Scale from [mm] to [m]
   }
 }
 
@@ -421,11 +424,24 @@ void i3ds::VzenseCamera::add_ir_frame_to_depthmap(i3ds::DepthMap& depthMap, cons
 
   uint16_t* ir_data = reinterpret_cast<uint16_t*>(ir_frame.pFrameData);
 
-  for (size_t i = 0; i < image_data_size/2; i++) { // Length is halved since we use uint16_t pointer
+  unsigned int n_pixels = image_data_size/2; // Length is halved since we use uint16_t pointer
+
+  for (size_t i = 0; i < n_pixels; i++) {
     ir_data[i] *= 17; // Scaling factor. The highest IR pixel value is 3840.
   }
 
-  depthMap.frame.append_image(ir_frame.pFrameData, image_data_size);
+  if (param_.flip_image) {
+    if (flipped_image_ == nullptr) {
+      flipped_image_ = std::unique_ptr<uint16_t>(new uint16_t[n_pixels]());
+    }
+    for (size_t i = 0; i < n_pixels; i++) {
+      flipped_image_.get()[n_pixels-1-i] = ir_data[i];
+    }
+    depthMap.frame.append_image(reinterpret_cast<i3ds_asn1::byte*>(flipped_image_.get()), image_data_size);
+  } else {
+    depthMap.frame.append_image(ir_frame.pFrameData, image_data_size);
+  }
+
   depthMap.has_frame = true;
 }
   
