@@ -65,6 +65,12 @@ int main(int argc, char** argv) {
   i3ds::VzenseCamera::Parameters param;
   i3ds::Configurator configurator;
 
+  param.filter_depth_distortion = false;
+  param.filter_ir_distortion = false;
+  param.filter_compute_real_depth_correction = false;
+  param.filter_spatial = false;
+  param.filter_time = false;
+
   po::options_description desc("Allowed camera control options");
   configurator.add_common_options(desc);
 
@@ -74,6 +80,12 @@ int main(int argc, char** argv) {
   ("no-ir", po::bool_switch(&no_ir), "Disable IR output")
   ("flip,f", po::bool_switch(&param.flip_image), "Flip measurement output")
   ("print,p", "Print the camera configuration")
+  ("filter-depth,fdd", po::bool_switch(&param.filter_depth_distortion), "Filter: depth distortion")
+  ("filter-ir,fid", po::bool_switch(&param.filter_ir_distortion), "Filter: IR distortion")
+  ("filter-compute,fcc", po::bool_switch(&param.filter_compute_real_depth_correction), "Filter: compute real depth correction")
+  ("filter-spatial,fs", po::bool_switch(&param.filter_spatial), "Filter: Spatial ")
+  ("filter-time,ft", po::bool_switch(&param.filter_time), "Filter: Time")
+  ("threshold,t", po::value<u_int16_t>(&param.threshold)->default_value(20), "Set threshold value")
   ;
 
   po::variables_map vm = configurator.parse_common_options(desc, argc, argv);
