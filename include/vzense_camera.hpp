@@ -34,6 +34,16 @@ class VzenseCamera : public ToFCamera {
 
     // Flip image 180 degrees
     bool flip_image;
+
+    // filters
+    bool filter_depth_distortion;
+    bool filter_ir_distortion;
+    bool filter_compute_real_depth_correction;
+    bool filter_spatial;
+    bool filter_time;
+
+    // threshold setting
+    uint16_t threshold;
   };
 
   // Constructor and destructor.
