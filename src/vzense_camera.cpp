@@ -231,6 +231,9 @@ void i3ds::VzenseCamera::do_start() {
   }
 
 
+  BOOST_LOG_TRIVIAL(info) << "-------- Camera filters and params:";
+
+
   // FILTERS:
   bool depth_correction;
   status = Ps2_SetDepthDistortionCorrectionEnabled(device_handle_, session_index_, param_.filter_depth_distortion);
@@ -238,7 +241,7 @@ void i3ds::VzenseCamera::do_start() {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetDepthDistortionCorrectionEnabled failed!" << returnStatus2string(status);
   } else {
     status = Ps2_GetDepthDistortionCorrectionEnabled(device_handle_, session_index_, &depth_correction);
-    BOOST_LOG_TRIVIAL(info) << "Ps2_GetDepthDistortionCorrectionEnabled: " << depth_correction;
+    BOOST_LOG_TRIVIAL(info) << "Depth Distortion Correction Filter: " << depth_correction;
   }
 
   bool ir_correction;
@@ -247,7 +250,7 @@ void i3ds::VzenseCamera::do_start() {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetIrDistortionCorrectionEnabled failed!" << returnStatus2string(status);
   } else {
     status = Ps2_GetIrDistortionCorrectionEnabled(device_handle_, session_index_, &ir_correction);
-    BOOST_LOG_TRIVIAL(info) << "Ps2_GetIrDistortionCorrectionEnabled: " << ir_correction;
+    BOOST_LOG_TRIVIAL(info) << "IR Distortion Correction Filter: " << ir_correction;
   }
 
   bool compute_correction;
@@ -256,7 +259,7 @@ void i3ds::VzenseCamera::do_start() {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetComputeRealDepthCorrectionEnabled failed!" << returnStatus2string(status);
   } else {
     status = Ps2_GetComputeRealDepthCorrectionEnabled(device_handle_, session_index_, &compute_correction);
-    BOOST_LOG_TRIVIAL(info) << "Ps2_GetComputeRealDepthCorrectionEnabled: " << compute_correction;
+    BOOST_LOG_TRIVIAL(info) << "Compute Real Depth Correction Filter: " << compute_correction;
   }
 
   bool spatial_filter;
@@ -265,7 +268,7 @@ void i3ds::VzenseCamera::do_start() {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetSpatialFilterEnabled failed!" << returnStatus2string(status);
   } else {
     status = Ps2_GetSpatialFilterEnabled(device_handle_, session_index_, &spatial_filter);
-    BOOST_LOG_TRIVIAL(info) << "Ps2_GetSpatialFilterEnabled: " << spatial_filter;
+    BOOST_LOG_TRIVIAL(info) << "Spatial Filter: " << spatial_filter;
   }
 
   bool time_filter;
@@ -274,16 +277,15 @@ void i3ds::VzenseCamera::do_start() {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetTimeFilterEnabled failed!" << returnStatus2string(status);
   } else {
     status = Ps2_GetTimeFilterEnabled(device_handle_, session_index_, &time_filter);
-    BOOST_LOG_TRIVIAL(info) << "Ps2_GetTimeFilterEnabled: " << time_filter;
+    BOOST_LOG_TRIVIAL(info) << "Time Filter: " << time_filter;
   }
 
+  // Threshold
 
   if (param_.threshold != 0) {
     status = Ps2_SetThreshold(device_handle_, session_index_, param_.threshold);
     if (status != PsReturnStatus::PsRetOK) {
       BOOST_LOG_TRIVIAL(warning) << "Ps2_GetThreshold failed!" << returnStatus2string(status);
-    } else {
-      BOOST_LOG_TRIVIAL(info) << "Set threshold value to: " << param_.threshold;
     }
   }
 
@@ -292,45 +294,44 @@ void i3ds::VzenseCamera::do_start() {
   if (status != PsReturnStatus::PsRetOK) {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_GetThreshold failed!" << returnStatus2string(status);
   } else {
-    BOOST_LOG_TRIVIAL(info) << "threshold value: " << threshold_default;
+    BOOST_LOG_TRIVIAL(info) << "Threshold value: " << threshold_default;
   }
 
-
-
-
-
-
-  
+  // Data mode
+  BOOST_LOG_TRIVIAL(info) << "-------- Data settings:";
 
   PsDataMode dataMode = PsDepthAndIR_30;
+  // PsDataMode getDataMode;
   status = Ps2_SetDataMode(device_handle_, session_index_, dataMode);
 
-  if (status != PsReturnStatus::PsRetOK)
+  if (status != PsReturnStatus::PsRetOK) {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetDataMode failed!:" << dataMode2str(dataMode);
-  else
-    BOOST_LOG_TRIVIAL(info) << "Set Ps2_SetDataMode: " << dataMode2str(dataMode);
-  
-  status = Ps2_GetDataMode(device_handle_, session_index_, &dataMode);
-
-  if (status != PsReturnStatus::PsRetOK)
-    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetDataMode failed!" << returnStatus2string(status);
-  else
-    BOOST_LOG_TRIVIAL(info) << "Get Ps2_GetDataMode: " << dataMode2str(dataMode);
+  } else {
+    status = Ps2_GetDataMode(device_handle_, session_index_, &dataMode);
+    if (status != PsReturnStatus::PsRetOK)
+      BOOST_LOG_TRIVIAL(warning) << "Ps2_GetDataMode failed!" << returnStatus2string(status);
+    else
+      BOOST_LOG_TRIVIAL(info) << "Data output mode: " << dataMode2str(dataMode);
+  }
 
   // Synchronize (in time) IR and Depth images within the camera
   bool enableSynchronization = true;
+  bool getSyncValue;
   status = Ps2_SetSynchronizeEnabled(device_handle_, session_index_, enableSynchronization);
   
-  if (status != PsReturnStatus::PsRetOK)
+  if (status != PsReturnStatus::PsRetOK) {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_SetSynchronizeEnabled failed!" << returnStatus2string(status);
-  else
-    BOOST_LOG_TRIVIAL(info) << "Set Ps2_SetSynchronizeEnabled: " << std::boolalpha << enableSynchronization;
+  } else {
+    status = Ps2_GetSynchronizeEnabled(device_handle_, session_index_, &getSyncValue);
+    if (status != PsReturnStatus::PsRetOK)
+      BOOST_LOG_TRIVIAL(warning) << "Ps2_GetSynchronizeEnabled failed!" << returnStatus2string(status);
+    else
+      BOOST_LOG_TRIVIAL(info) << "Synchronization between IR and Depth: " << getSyncValue;
+  }
 
 
-
-
-
-
+  BOOST_LOG_TRIVIAL(info) << "--------";
+  
 
 
 
