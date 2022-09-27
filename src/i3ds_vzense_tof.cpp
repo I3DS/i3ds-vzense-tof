@@ -80,6 +80,9 @@ int main(int argc, char** argv) {
   ("filter-spatial", po::bool_switch(&param.filter_spatial), "Enable Filter: Spatial ")
   ("filter-time", po::bool_switch(&param.filter_time), "Enable Filter: Time")
   ("threshold,t", po::value<u_int16_t>(&param.threshold)->default_value(20), "Set threshold value")
+  ("pulse-count,u", po::value<u_int16_t>(&param.pulse_count)->default_value(500), "Set pulse count")
+  ("gmm-gain,g", po::value<u_int16_t>(&param.gmm_gain)->default_value(2000), "Set gamma gain of depth image")
+  ("gmm-gain-option", po::value<u_int8_t>(&param.gmm_gain_option)->default_value(0), "Set gamma gain option: 0 for immediate effect, 1 for permanent entry into force")
   ;
 
   po::variables_map vm = configurator.parse_common_options(desc, argc, argv);

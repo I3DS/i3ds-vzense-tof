@@ -285,16 +285,52 @@ void i3ds::VzenseCamera::do_start() {
   if (param_.threshold != 0) {
     status = Ps2_SetThreshold(device_handle_, session_index_, param_.threshold);
     if (status != PsReturnStatus::PsRetOK) {
-      BOOST_LOG_TRIVIAL(warning) << "Ps2_GetThreshold failed!" << returnStatus2string(status);
+      BOOST_LOG_TRIVIAL(warning) << "Ps2_SetThreshold failed!" << returnStatus2string(status);
     }
   }
 
-  uint16_t threshold_default;
-  status = Ps2_GetThreshold(device_handle_, session_index_, &threshold_default);
+  uint16_t threshold_value;
+  status = Ps2_GetThreshold(device_handle_, session_index_, &threshold_value);
   if (status != PsReturnStatus::PsRetOK) {
     BOOST_LOG_TRIVIAL(warning) << "Ps2_GetThreshold failed!" << returnStatus2string(status);
   } else {
-    BOOST_LOG_TRIVIAL(info) << "Threshold value: " << threshold_default;
+    BOOST_LOG_TRIVIAL(info) << "Threshold value: " << threshold_value;
+  }
+
+  // pulse count
+
+  if (param_.pulse_count != 0) {
+    status = Ps2_SetPulseCount(device_handle_, session_index_, param_.pulse_count);
+    if (status != PsReturnStatus::PsRetOK) {
+      BOOST_LOG_TRIVIAL(warning) << "Ps2_SetPulseCount failed!" << returnStatus2string(status);
+    }
+  }
+
+  uint16_t pulse_count_value;
+  status = Ps2_GetPulseCount(device_handle_, session_index_, &pulse_count_value);
+  if (status != PsReturnStatus::PsRetOK) {
+    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetPulseCount failed!" << returnStatus2string(status);
+  } else {
+    BOOST_LOG_TRIVIAL(info) << "Pulse Count value: " << pulse_count_value;
+  }
+
+  // GMM Gain (gamma)
+
+  PsGMMGain gmm_options = {param_.gmm_gain, param_.gmm_gain_option};
+  if (param_.gmm_gain != 0) {
+    status = Ps2_SetGMMGain(device_handle_, session_index_, gmm_options);
+    if (status != PsReturnStatus::PsRetOK) {
+      BOOST_LOG_TRIVIAL(warning) << "Ps2_SetGMMGain failed!" << returnStatus2string(status);
+    }
+  }
+
+  uint16_t gmm_options_value;
+  status = Ps2_GetGMMGain(device_handle_, session_index_, &gmm_options_value);
+  if (status != PsReturnStatus::PsRetOK) {
+    BOOST_LOG_TRIVIAL(warning) << "Ps2_GetThreshold failed!" << returnStatus2string(status);
+  } else {
+    BOOST_LOG_TRIVIAL(info) << "GMM Gain value: " << gmm_options_value;
+    BOOST_LOG_TRIVIAL(info) << "GMM option: " << param_.gmm_gain_option;
   }
 
   // Data mode

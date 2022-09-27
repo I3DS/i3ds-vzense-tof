@@ -44,6 +44,9 @@ class VzenseCamera : public ToFCamera {
 
     // threshold setting
     uint16_t threshold;
+    uint16_t pulse_count;
+    uint16_t gmm_gain;
+    uint8_t gmm_gain_option;
   };
 
   // Constructor and destructor.
