@@ -74,6 +74,7 @@ int main(int argc, char** argv) {
   ("no-ir", po::bool_switch(&no_ir), "Disable IR output")
   ("flip,f", po::bool_switch(&param.flip_image), "Flip measurement output")
   ("print,p", "Print the camera configuration")
+  ("param", "Print the camera parameters")
   ("filter-depth", po::bool_switch(&param.filter_depth_distortion), "Enable Filter: depth distortion")
   ("filter-ir", po::bool_switch(&param.filter_ir_distortion), "Enable Filter: IR distortion")
   ("filter-compute", po::bool_switch(&param.filter_compute_real_depth_correction), "Enable Filter: compute real depth correction")
@@ -91,6 +92,11 @@ int main(int argc, char** argv) {
     print_available_cameras();
     return 0;
   }
+  if (vm.count("param")) {
+    get_camera_parameters(param.camera_name);
+    return 0;
+  }
+      
 
   param.ir_output = !no_ir;
 

@@ -28,11 +28,7 @@ inline bool initialize_vzense() {
   return true;
 }
 
-inline void print_camera_parameters(PsDeviceHandle deviceHandle, uint32_t sessionIndex) {
-  PsCameraParameters cameraParameters;
-  auto status = Ps2_GetCameraParameters(deviceHandle, sessionIndex, PsDepthSensor, &cameraParameters);
-
-  BOOST_LOG_TRIVIAL(info) << "Get PsGetCameraParameters status: " << status;
+inline void print_camera_parameters(PsCameraParameters cameraParameters) {
   BOOST_LOG_TRIVIAL(info) << "Depth Camera Intinsic: ";
   BOOST_LOG_TRIVIAL(info) << "Fx: " << cameraParameters.fx;
   BOOST_LOG_TRIVIAL(info) << "Cx: " << cameraParameters.cx;
@@ -172,6 +168,15 @@ inline bool print_available_cameras() {
         //BOOST_LOG_TRIVIAL(info) << "status: " << connectStatus2string(pDeviceListInfo[i].status);
     }
     return true;
+}
+
+inline void get_camera_parameters(std::string camera_name) {
+  PsDeviceHandle deviceHandle;  
+  connect_to_device(camera_name, &deviceHandle);
+  PsCameraParameters cameraParameters;
+  auto status = Ps2_GetCameraParameters(deviceHandle, 0, PsDepthSensor, &cameraParameters);
+  BOOST_LOG_TRIVIAL(info) << "Get PsGetCameraParameters status: " << status;
+  print_camera_parameters(cameraParameters);
 }
 
 #endif  // __VZENSE_WRAPPER_HPP
